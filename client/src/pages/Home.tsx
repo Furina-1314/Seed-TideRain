@@ -226,20 +226,6 @@ export default function Home() {
 
       {/* 移动端布局 */}
       <div className="relative z-10 h-full flex flex-col lg:hidden">
-        <div className="flex items-center gap-2 px-4 pt-3 pb-2 shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
-            <Leaf size={16} className="text-white" />
-          </div>
-          <span className="text-base font-bold">专注陪伴</span>
-          <div className="ml-auto flex gap-2">
-            <button onClick={() => setShowCalendar(true)} className="p-2 rounded-lg bg-white/80 text-gray-600">
-              <Calendar size={18} />
-            </button>
-            <button onClick={() => setShowProfile(true)} className="p-2 rounded-lg bg-white/80 text-gray-600">
-              <User size={18} />
-            </button>
-          </div>
-        </div>
         
         <div className="flex-1 relative min-h-0">
           <div className="w-full h-full">
