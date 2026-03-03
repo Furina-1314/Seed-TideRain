@@ -3,6 +3,7 @@ import { useAudioEngine } from "@/hooks/useAudioEngine";
 import { useMusicPlayer } from "@/hooks/useMusicPlayer";
 import { useDeleteConfirm } from "@/hooks/useDeleteConfirm";
 import { saveMusicFile, deleteMusicFile, getMusicFileUrl } from "@/lib/musicStorage";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   Volume2, VolumeX, Sliders, Sparkles, Music, 
   Upload, Trash2, Edit2, Check, X, GripVertical, Play, Pause,
@@ -200,13 +201,17 @@ function MusicTrackItem({
       
       {/* 播放/状态按钮 */}
       {isMissing ? (
-        <button
-          onClick={onReupload}
-          className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-red-100 text-red-500 hover:bg-red-200 transition-colors"
-          data-tooltip="文件已丢失，点击重新上传"
-        >
-          <RefreshCw size={12} />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onReupload}
+              className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-red-100 text-red-500 hover:bg-red-200 transition-colors"
+            >
+              <RefreshCw size={12} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" sideOffset={6}>文件已丢失，点击重新上传</TooltipContent>
+        </Tooltip>
       ) : isLoading ? (
         <div className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-gray-100 text-gray-400">
           <div className="w-3 h-3 border-2 border-gray-300 border-t-purple-500 rounded-full animate-spin" />
@@ -238,22 +243,30 @@ function MusicTrackItem({
               onBlur={handleBlur}
               onClick={(e) => e.stopPropagation()}
             />
-            <button 
-              data-edit-action="save"
-              onClick={(e) => { e.stopPropagation(); handleSave(); }} 
-              className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded transition-colors shrink-0"
-              data-tooltip="保存 (Enter)"
-            >
-              <Check size={12} />
-            </button>
-            <button 
-              data-edit-action="cancel"
-              onClick={(e) => { e.stopPropagation(); handleCancel(); }} 
-              className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors shrink-0"
-              data-tooltip="取消 (Esc)"
-            >
-              <X size={12} />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  data-edit-action="save"
+                  onClick={(e) => { e.stopPropagation(); handleSave(); }} 
+                  className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded transition-colors shrink-0"
+                >
+                  <Check size={12} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={6}>保存 (Enter)</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  data-edit-action="cancel"
+                  onClick={(e) => { e.stopPropagation(); handleCancel(); }} 
+                  className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors shrink-0"
+                >
+                  <X size={12} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={6}>取消 (Esc)</TooltipContent>
+            </Tooltip>
           </div>
         ) : (
           <div 
@@ -283,13 +296,17 @@ function MusicTrackItem({
       {!isEditing && (
         <div className="flex items-center gap-0.5 shrink-0">
           {!isMissing && !isConfirmingDelete && (
-            <button 
-              onClick={(e) => { e.stopPropagation(); onStartEdit(); }} 
-              className="p-1 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded"
-              data-tooltip="重命名"
-            >
-              <Edit2 size={12} />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onStartEdit(); }} 
+                  className="p-1 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded"
+                >
+                  <Edit2 size={12} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={6}>重命名</TooltipContent>
+            </Tooltip>
           )}
           {isConfirmingDelete ? (
             <div className="flex items-center gap-0.5">
@@ -302,13 +319,17 @@ function MusicTrackItem({
               </button>
             </div>
           ) : (
-            <button 
-              onClick={(e) => { e.stopPropagation(); onDelete(); }} 
-              className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
-              data-tooltip="删除"
-            >
-              <Trash2 size={12} />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onDelete(); }} 
+                  className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={6}>删除</TooltipContent>
+            </Tooltip>
           )}
         </div>
       )}
@@ -373,18 +394,22 @@ function RepeatModeButton({ mode, onChange }: { mode: "none" | "all" | "one"; on
   const nextMode = modes[(modes.findIndex((m) => m.key === mode) + 1) % modes.length].key;
   
   return (
-    <button 
-      onClick={() => onChange(nextMode)}
-      className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-        mode === "none" 
-          ? "bg-gray-100 text-gray-600 hover:bg-gray-200" 
-          : "bg-purple-100 text-purple-600 hover:bg-purple-200"
-      }`}
-      data-tooltip={`${current.label}播放 (点击切换)`}
-    >
-      <current.icon size={14} />
-      <span>{current.label}</span>
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button 
+          onClick={() => onChange(nextMode)}
+          className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            mode === "none" 
+              ? "bg-gray-100 text-gray-600 hover:bg-gray-200" 
+              : "bg-purple-100 text-purple-600 hover:bg-purple-200"
+          }`}
+        >
+          <current.icon size={14} />
+          <span>{current.label}</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" sideOffset={6}>{`${current.label}播放 (点击切换)`}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -895,22 +920,30 @@ export default function SoundPanel() {
         <div className="flex items-center gap-1">
           {/* 恢复上次按钮 */}
           {showRestoreButton && lastAudioStateRef.current && (
-            <button
-              onClick={handleRestoreLast}
-              className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors animate-in fade-in slide-in-from-right-2 duration-200"
-              data-tooltip="恢复上次的场景、混音和音乐设置"
-            >
-              <RefreshCw size={12} />
-              恢复上次
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleRestoreLast}
+                  className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors animate-in fade-in slide-in-from-right-2 duration-200"
+                >
+                  <RefreshCw size={12} />
+                  恢复上次
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={6}>恢复上次的场景、混音和音乐设置</TooltipContent>
+            </Tooltip>
           )}
-          <button 
-            onClick={handleMuteToggle} 
-            className={`p-1.5 rounded-lg transition-colors ${!isAllMuted ? "bg-purple-100 text-purple-600" : "bg-gray-100 text-gray-500"}`}
-            data-tooltip={!isAllMuted ? "静音" : "静音"}
-          >
-            {!isAllMuted ? <Volume2 size={16} /> : <VolumeX size={16} />}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button 
+                onClick={handleMuteToggle} 
+                className={`p-1.5 rounded-lg transition-colors ${!isAllMuted ? "bg-purple-100 text-purple-600" : "bg-gray-100 text-gray-500"}`}
+              >
+                {!isAllMuted ? <Volume2 size={16} /> : <VolumeX size={16} />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={6}>静音</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -1008,20 +1041,28 @@ export default function SoundPanel() {
             {state.musicTracks.length > 0 && (
               <div className="flex items-center justify-between px-1 py-1">
                 <div className="flex items-center gap-1">
-                  <button 
-                    onClick={playPrevious}
-                    className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-purple-600 transition-colors"
-                    data-tooltip="上一首"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                  <button 
-                    onClick={playNext}
-                    className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-purple-600 transition-colors"
-                    data-tooltip="下一首"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button 
+                        onClick={playPrevious}
+                        className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-purple-600 transition-colors"
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={6}>上一首</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button 
+                        onClick={playNext}
+                        className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-purple-600 transition-colors"
+                      >
+                        <ChevronRight size={18} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={6}>下一首</TooltipContent>
+                  </Tooltip>
                 </div>
                 <RepeatModeButton mode={repeatMode} onChange={setRepeatMode} />
               </div>

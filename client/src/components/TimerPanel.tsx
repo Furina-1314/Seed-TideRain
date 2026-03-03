@@ -1,5 +1,6 @@
-import { usePomodoro } from "@/hooks/usePomodoro";
+﻿import { usePomodoro } from "@/hooks/usePomodoro";
 import { useGame, FocusSession } from "@/contexts/GameContext";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Play, Pause, RotateCcw, Settings, X, History, ChevronDown, ChevronUp, Heart, SkipForward } from "lucide-react";
 import { playCompleteSound } from "@/lib/sound";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
@@ -411,14 +412,18 @@ export default function TimerPanel({ compact = false }: TimerPanelProps) {
         <span className="text-sm font-medium text-gray-700">
           {mode === "focus" ? "专注时间" : mode === "longBreak" ? "长休息 🌿" : "短休息 ☕"}
         </span>
-        <button 
-          onClick={() => setShowHistory(true)} 
-          className="text-[10px] text-purple-600 bg-purple-50 hover:bg-purple-100 px-2 py-0.5 rounded-full ml-1 transition-colors flex items-center gap-1 border border-purple-200"
-          data-tooltip="查看专注记录"
-        >
-          <History size={10} />
-          已完成 {state.sessionsCompleted}
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button 
+              onClick={() => setShowHistory(true)} 
+              className="text-[10px] text-purple-600 bg-purple-50 hover:bg-purple-100 px-2 py-0.5 rounded-full ml-1 transition-colors flex items-center gap-1 border border-purple-200"
+            >
+              <History size={10} />
+              已完成 {state.sessionsCompleted}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" sideOffset={6}>查看专注记录</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* 计时器圆环 - 确保数字在圆圈内 */}
@@ -443,27 +448,37 @@ export default function TimerPanel({ compact = false }: TimerPanelProps) {
               </div>
               {/* 重置组计数和跳过按钮 */}
               <div className="flex items-center justify-center gap-3 mt-1">
-                <button 
-                  onClick={() => dispatch({ type: "RESET_SESSION_COUNT" })}
-                  className="p-2 -m-1 text-gray-300 hover:text-gray-500 transition-colors"
-                  data-tooltip="重置组计数"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                    <path d="M3 3v5h5" />
-                  </svg>
-                </button>
-                <button 
-                  onClick={() => {
-                    playCompleteSound();
-                    dispatch({ type: "COMPLETE_SESSION" });
-                  }}
-                  disabled={mode === "focus" && state.skipButtonLocked}
-                  className={`p-2 -m-1 transition-colors ${mode === "focus" && state.skipButtonLocked ? 'text-gray-200 cursor-not-allowed' : 'text-gray-300 hover:text-gray-500'}`}
-                  data-tooltip={mode === "focus" && state.skipButtonLocked ? "跳过已锁定，请在个人中心解锁" : "跳过当前阶段"}
-                >
-                  <SkipForward size={16} />
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button 
+                      onClick={() => dispatch({ type: "RESET_SESSION_COUNT" })}
+                      className="p-2 -m-1 text-gray-300 hover:text-gray-500 transition-colors"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                        <path d="M3 3v5h5" />
+                      </svg>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" sideOffset={6}>重置组计数</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button 
+                      onClick={() => {
+                        playCompleteSound();
+                        dispatch({ type: "COMPLETE_SESSION" });
+                      }}
+                      disabled={mode === "focus" && state.skipButtonLocked}
+                      className={`p-2 -m-1 transition-colors ${mode === "focus" && state.skipButtonLocked ? 'text-gray-200 cursor-not-allowed' : 'text-gray-300 hover:text-gray-500'}`}
+                    >
+                      <SkipForward size={16} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" sideOffset={6}>
+                    {mode === "focus" && state.skipButtonLocked ? "跳过已锁定，请在个人中心解锁" : "跳过当前阶段"}
+                  </TooltipContent>
+                </Tooltip>
               </div>
             </div>
           </div>
@@ -474,72 +489,95 @@ export default function TimerPanel({ compact = false }: TimerPanelProps) {
 
       {/* 控制按钮 */}
       <div className="flex items-center justify-center gap-4 shrink-0 mt-2">
-        <button onClick={reset} className="w-12 h-12 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors" data-tooltip="重置计时">
-          <RotateCcw size={20} className="text-gray-600" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button onClick={reset} className="w-12 h-12 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+              <RotateCcw size={20} className="text-gray-600" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" sideOffset={6}>重置计时</TooltipContent>
+        </Tooltip>
 
         {mode === "focus" ? (
-          <button 
-            onClick={() => {
-              if (isRunning) {
-                pause();
-                playNotificationSound("pause");
-              } else {
-                start();
-                playNotificationSound("start");
-              }
-            }} 
-            className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 ${isRunning ? "bg-amber-400 hover:bg-amber-500 text-white" : "bg-emerald-500 hover:bg-emerald-600 text-white"}`}
-            data-tooltip={focusButtonTitle}
-          >
-            {isRunning ? <Pause size={32} /> : <Play size={32} className="ml-1" />}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button 
+                onClick={() => {
+                  if (isRunning) {
+                    pause();
+                    playNotificationSound("pause");
+                  } else {
+                    start();
+                    playNotificationSound("start");
+                  }
+                }} 
+                className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 ${isRunning ? "bg-amber-400 hover:bg-amber-500 text-white" : "bg-emerald-500 hover:bg-emerald-600 text-white"}`}
+              >
+                {isRunning ? <Pause size={32} /> : <Play size={32} className="ml-1" />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={6}>{focusButtonTitle}</TooltipContent>
+          </Tooltip>
         ) : mode === "longBreak" ? (
-          <button 
-            onClick={() => {
-              if (isRunning) {
-                pause();
-                playNotificationSound("pause");
-              } else {
-                start();
-                playNotificationSound("start");
-              }
-            }} 
-            className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 ${isRunning ? "bg-blue-400 hover:bg-blue-500 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}`}
-            data-tooltip={breakButtonTitle}
-          >
-            {isRunning ? <Pause size={32} /> : <Play size={32} className="ml-1" />}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button 
+                onClick={() => {
+                  if (isRunning) {
+                    pause();
+                    playNotificationSound("pause");
+                  } else {
+                    start();
+                    playNotificationSound("start");
+                  }
+                }} 
+                className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 ${isRunning ? "bg-blue-400 hover:bg-blue-500 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}`}
+              >
+                {isRunning ? <Pause size={32} /> : <Play size={32} className="ml-1" />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={6}>{breakButtonTitle}</TooltipContent>
+          </Tooltip>
         ) : (
-          <button 
-            onClick={() => {
-              if (isRunning) {
-                pause();
-                playNotificationSound("pause");
-              } else {
-                start();
-                playNotificationSound("start");
-              }
-            }} 
-            className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 ${isRunning ? "bg-amber-400 hover:bg-amber-500 text-white" : "bg-amber-500 hover:bg-amber-600 text-white"}`}
-            data-tooltip={breakButtonTitle}
-          >
-            {isRunning ? <Pause size={32} /> : <Play size={32} className="ml-1" />}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button 
+                onClick={() => {
+                  if (isRunning) {
+                    pause();
+                    playNotificationSound("pause");
+                  } else {
+                    start();
+                    playNotificationSound("start");
+                  }
+                }} 
+                className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 ${isRunning ? "bg-amber-400 hover:bg-amber-500 text-white" : "bg-amber-500 hover:bg-amber-600 text-white"}`}
+              >
+                {isRunning ? <Pause size={32} /> : <Play size={32} className="ml-1" />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={6}>{breakButtonTitle}</TooltipContent>
+          </Tooltip>
         )}
 
-        <button 
-          onClick={() => setShowSettings(true)} 
-          disabled={settingsDisabled}
-          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-            settingsDisabled
-              ? "bg-gray-200 text-gray-400 cursor-not-allowed" 
-              : "bg-gray-100 hover:bg-gray-200 text-gray-600"
-          }`}
-          data-tooltip={settingsDisabled ? "专注已开始，无法修改设置" : "计时设置"}
-        >
-          <Settings size={20} />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button 
+              onClick={() => setShowSettings(true)} 
+              disabled={settingsDisabled}
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                settingsDisabled
+                  ? "bg-gray-200 text-gray-400 cursor-not-allowed" 
+                  : "bg-gray-100 hover:bg-gray-200 text-gray-600"
+              }`}
+            >
+              <Settings size={20} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" sideOffset={6}>
+            {settingsDisabled ? "专注已开始，无法修改设置" : "计时设置"}
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );

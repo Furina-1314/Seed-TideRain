@@ -11,6 +11,7 @@ import ProfilePage from "@/components/ProfilePage";
 import CalendarView from "@/components/CalendarView";
 import DialogBubble from "@/components/DialogBubble";
 import FloatingParticles from "@/components/FloatingParticles";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   FileText,
   BookText,
@@ -92,8 +93,6 @@ export default function Home() {
     <div className="fixed inset-0 overflow-hidden">
       {/* 背景层 */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* 渐变背景 */}
-        <div className="absolute inset-0 bg-gradient-to-b from-sky-100 via-sky-50 to-green-50" />
         {/* 随机背景图（50%概率显示 clouds-bg 或 hero-bg）*/}
         <div 
           className="absolute inset-0 opacity-35" 
@@ -101,7 +100,7 @@ export default function Home() {
             backgroundImage: `url(${RANDOM_BG})`, 
             backgroundSize: "cover", 
             backgroundPosition: IS_CLOUDS ? "center" : "center bottom",
-            maskImage: IS_CLOUDS ? undefined : "linear-gradient(to top, black 0%, transparent 60%)"
+            maskImage: undefined
           }} 
         />
         {/* 自定义背景（如果有）*/}
@@ -112,12 +111,22 @@ export default function Home() {
 
       {/* 顶部中间工具栏 */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex gap-2">
-        <button onClick={() => setShowCalendar(true)} className="p-2.5 rounded-xl bg-white/80 shadow-lg hover:bg-white transition-colors text-gray-600" data-tooltip="日历" data-tooltip-pos="bottom">
-          <Calendar size={20} />
-        </button>
-        <button onClick={() => setShowProfile(true)} className="p-2.5 rounded-xl bg-white/80 shadow-lg hover:bg-white transition-colors text-gray-600" data-tooltip="个人中心" data-tooltip-pos="bottom">
-          <User size={20} />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button onClick={() => setShowCalendar(true)} className="p-2.5 rounded-xl bg-white/80 shadow-lg hover:bg-white transition-colors text-gray-600">
+              <Calendar size={20} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={6}>日历</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button onClick={() => setShowProfile(true)} className="p-2.5 rounded-xl bg-white/80 shadow-lg hover:bg-white transition-colors text-gray-600">
+              <User size={20} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={6}>个人中心</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* 桌面端布局 */}
@@ -226,21 +235,7 @@ export default function Home() {
 
       {/* 移动端布局 */}
       <div className="relative z-10 h-full flex flex-col lg:hidden">
-        <div className="flex items-center gap-2 px-4 pt-3 pb-2 shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
-            <Leaf size={16} className="text-white" />
-          </div>
-          <span className="text-base font-bold">专注陪伴</span>
-          <div className="ml-auto flex gap-2">
-            <button onClick={() => setShowCalendar(true)} className="p-2 rounded-lg bg-white/80 text-gray-600">
-              <Calendar size={18} />
-            </button>
-            <button onClick={() => setShowProfile(true)} className="p-2 rounded-lg bg-white/80 text-gray-600">
-              <User size={18} />
-            </button>
-          </div>
-        </div>
-        
+
         <div className="flex-1 relative min-h-0">
           <div className="w-full h-full">
             <Suspense fallback={<div className="w-full h-full flex items-center justify-center"><Leaf size={32} className="text-emerald-400 animate-pulse" /></div>}>

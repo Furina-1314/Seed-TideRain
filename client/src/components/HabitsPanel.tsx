@@ -1,6 +1,7 @@
 import { useGame } from "@/contexts/GameContext";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useDeleteConfirm } from "@/hooks/useDeleteConfirm";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, Trash2, CheckCircle2, Circle, Target, Flame, Trophy, Calendar, ChevronDown, ChevronUp, X } from "lucide-react";
 
 function Celebration({ show, onComplete }: { show: boolean; onComplete: () => void }) {
@@ -102,9 +103,14 @@ export default function HabitsPanel() {
           </div>
         </div>
         <div className="flex gap-1">
-          <button onClick={() => setShowHistory(!showHistory)} className={`p-2 rounded-xl transition-colors ${showHistory ? "bg-emerald-100 text-emerald-600" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`} data-tooltip="历史记录">
-            <Calendar size={16} />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button onClick={() => setShowHistory(!showHistory)} className={`p-2 rounded-xl transition-colors ${showHistory ? "bg-emerald-100 text-emerald-600" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
+                <Calendar size={16} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={6}>历史记录</TooltipContent>
+          </Tooltip>
           <button onClick={() => setIsAdding(true)} className="p-2 rounded-xl bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors">
             <Plus size={16} />
           </button>
