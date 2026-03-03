@@ -1,7 +1,6 @@
 import { useGame, SOUND_SCENES, INDIVIDUAL_SOUNDS, type MusicTrack } from "@/contexts/GameContext";
 import { useAudioEngine } from "@/hooks/useAudioEngine";
 import { useMusicPlayer } from "@/hooks/useMusicPlayer";
-import { useDeleteConfirm } from "@/hooks/useDeleteConfirm";
 import { saveMusicFile, deleteMusicFile, getMusicFileUrl } from "@/lib/musicStorage";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
@@ -85,10 +84,6 @@ interface MusicTrackItemProps {
   onDragOver: (e: React.DragEvent, index: number) => void;
   onDrop: (e: React.DragEvent, index: number) => void;
   onSeek?: (time: number) => void;
-  // 删除确认相关
-  isConfirmingDelete?: boolean;
-  onConfirmDelete?: () => void;
-  onCancelDelete?: () => void;
 }
 
 function MusicTrackItem({
@@ -109,9 +104,6 @@ function MusicTrackItem({
   onDragOver,
   onDrop,
   onSeek,
-  isConfirmingDelete = false,
-  onConfirmDelete,
-  onCancelDelete,
 }: MusicTrackItemProps) {
   const [editName, setEditName] = useState(track.name);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -295,7 +287,7 @@ function MusicTrackItem({
       {/* 操作按钮 - 非编辑状态可见 */}
       {!isEditing && (
         <div className="flex items-center gap-0.5 shrink-0">
-          {!isMissing && !isConfirmingDelete && (
+          {!isMissing && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button 
@@ -308,29 +300,17 @@ function MusicTrackItem({
               <TooltipContent side="top" sideOffset={6}>重命名</TooltipContent>
             </Tooltip>
           )}
-          {isConfirmingDelete ? (
-            <div className="flex items-center gap-0.5">
-              <span className="text-[10px] text-gray-500">确定？</span>
-              <button onClick={(e) => { e.stopPropagation(); onConfirmDelete?.(); }} className="p-1 text-red-500 hover:bg-red-50 rounded">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onDelete(); }} 
+                className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+              >
                 <Trash2 size={12} />
               </button>
-              <button onClick={(e) => { e.stopPropagation(); onCancelDelete?.(); }} className="p-1 text-gray-400 hover:bg-gray-100 rounded">
-                <X size={12} />
-              </button>
-            </div>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); onDelete(); }} 
-                  className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
-                >
-                  <Trash2 size={12} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" sideOffset={6}>删除</TooltipContent>
-            </Tooltip>
-          )}
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={6}>删除</TooltipContent>
+          </Tooltip>
         </div>
       )}
       </div>
@@ -677,18 +657,14 @@ export default function SoundPanel() {
     }
   };
 
-  // 删除确认
-  const { requestDelete, confirmDelete, cancelDelete, isConfirming } = useDeleteConfirm({
-    onDelete: async (id) => {
-      try {
-        await deleteMusicFile(id);
-      } catch (err) {
-        console.warn("Failed to delete from IndexedDB:", err);
-      }
-      dispatch({ type: "DELETE_MUSIC_TRACK", payload: id });
-    },
-    confirmText: "确定删除这首音乐？",
-  });
+  const handleDeleteTrack = async (id: string) => {
+    try {
+      await deleteMusicFile(id);
+    } catch (err) {
+      console.warn("Failed to delete from IndexedDB:", err);
+    }
+    dispatch({ type: "DELETE_MUSIC_TRACK", payload: id });
+  };
 
   // 新增：用于保存音乐播放状态
   const previousMusicPlayingRef = useRef(false);
@@ -1096,7 +1072,7 @@ export default function SoundPanel() {
                       currentTime={displayTime}
                       duration={displayDuration}
                       onPlay={() => handlePlayMusic(track.id)}
-                      onDelete={() => requestDelete(track.id)}
+                      onDelete={() => void handleDeleteTrack(track.id)}
                       onRename={(name) => handleRenameTrack(track.id, name)}
                       onReupload={() => setReuploadTrack(track)}
                       onStartEdit={() => setEditingTrackId(track.id)}
@@ -1105,9 +1081,6 @@ export default function SoundPanel() {
                       onDragOver={handleDragOver}
                       onDrop={handleDrop}
                       onSeek={isCurrent ? seekTo : undefined}
-                      isConfirmingDelete={isConfirming(track.id)}
-                      onConfirmDelete={confirmDelete}
-                      onCancelDelete={cancelDelete}
                     />
                   );
                 })
