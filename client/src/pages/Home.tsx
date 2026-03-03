@@ -93,8 +93,6 @@ export default function Home() {
     <div className="fixed inset-0 overflow-hidden">
       {/* 背景层 */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* 渐变背景 */}
-        <div className="absolute inset-0 bg-gradient-to-b from-sky-100 via-sky-50 to-green-50" />
         {/* 随机背景图（50%概率显示 clouds-bg 或 hero-bg）*/}
         <div 
           className="absolute inset-0 opacity-35" 
@@ -102,7 +100,7 @@ export default function Home() {
             backgroundImage: `url(${RANDOM_BG})`, 
             backgroundSize: "cover", 
             backgroundPosition: IS_CLOUDS ? "center" : "center bottom",
-            maskImage: IS_CLOUDS ? undefined : "linear-gradient(to top, black 0%, transparent 60%)"
+            maskImage: undefined
           }} 
         />
         {/* 自定义背景（如果有）*/}
@@ -237,7 +235,7 @@ export default function Home() {
 
       {/* 移动端布局 */}
       <div className="relative z-10 h-full flex flex-col lg:hidden">
-        
+
         <div className="flex-1 relative min-h-0">
           <div className="w-full h-full">
             <Suspense fallback={<div className="w-full h-full flex items-center justify-center"><Leaf size={32} className="text-emerald-400 animate-pulse" /></div>}>
