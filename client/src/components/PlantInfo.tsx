@@ -92,7 +92,7 @@ export default function PlantInfo() {
         </div>
         <div className="text-center p-2 rounded-xl bg-blue-50">
           <Timer size={14} className="mx-auto mb-0.5 text-blue-500" />
-          <div className="text-base font-bold text-gray-800" style={{ fontFamily: "var(--font-mono)" }}>{state.totalFocusMinutes}</div>
+          <div className="text-base font-bold text-gray-800" style={{ fontFamily: "var(--font-mono)" }}>{Math.floor(state.totalFocusMinutes)}</div>
           <div className="text-[9px] text-gray-500">专注分钟数</div>
         </div>
         <div className="text-center p-2 rounded-xl bg-orange-50">
