@@ -630,11 +630,16 @@ export default function SoundPanel() {
       setReuploadTrack(track);
       return;
     }
+
+    // 如果是当前正在播放的歌曲，则切换暂停/播放
     if (state.currentMusicId === trackId && state.isMusicPlaying) {
       dispatch({ type: "PAUSE_MUSIC" });
-    } else {
-      dispatch({ type: "PLAY_MUSIC", payload: trackId });
+      return;
     }
+
+    // 切换到新歌曲时始终从头开始播放，忽略先前保存的 progress
+    // 同样，当用户点击当前但已暂停的歌曲时也从头开始
+    dispatch({ type: "PLAY_MUSIC_FROM_START", payload: trackId });
   };
 
   // 判断当前混音是否与场景的默认设置一致
@@ -937,10 +942,10 @@ export default function SoundPanel() {
               ) : (
                 state.musicTracks.map((track, index) => {
                   const isCurrent = state.currentMusicId === track.id;
-                  //const savedProgress = state.musicProgress[track.id] || 0;
+                  const savedProgress = 0; // 目前没有保存历史进度的功能，默认从头开始
                   // 当前播放歌曲使用实时进度，其他歌曲使用保存的进度
-                  //const displayTime = isCurrent ? currentTime : savedProgress;
-                 const displayTime = isCurrent ? currentTime : 0; // 其他歌曲均从头开始，目前没有需要保存历史进度的情况
+                  const displayTime = isCurrent ? currentTime : savedProgress;
+                 //const displayTime = isCurrent ? currentTime : 0; // 其他歌曲均从头开始，目前没有需要保存历史进度的情况
                   // 对于非当前歌曲，尝试从track获取duration（如果之前加载过）
                   const displayDuration = isCurrent ? duration : (track.duration || 0);
                   
