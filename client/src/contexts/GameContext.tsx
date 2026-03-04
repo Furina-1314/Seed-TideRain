@@ -410,6 +410,7 @@ type GameAction =
   | { type: "DELETE_MUSIC_TRACK"; payload: string }
   | { type: "REORDER_MUSIC_TRACKS"; payload: MusicTrack[] }
   | { type: "PLAY_MUSIC"; payload: string | null }
+  | { type: "PLAY_MUSIC_FROM_START"; payload: string | null }
   | { type: "PAUSE_MUSIC" }
   | { type: "SET_CURRENT_MUSIC"; payload: string | null } // 只设置当前音乐，不自动播放
   | { type: "SET_MUSIC_VOLUME"; payload: number }
@@ -927,6 +928,26 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         currentMusicId: newTrackId,
         isMusicPlaying: newTrackId !== null,
         musicCurrentTime: savedProgress,
+        musicProgress: newProgress,
+      };
+    }
+
+    case "PLAY_MUSIC_FROM_START": {
+      const newTrackId = action.payload;
+
+      const newProgress = state.currentMusicId
+        ? { ...state.musicProgress, [state.currentMusicId]: state.musicCurrentTime }
+        : { ...state.musicProgress };
+
+      if (newTrackId) {
+        newProgress[newTrackId] = 0;
+      }
+
+      return {
+        ...state,
+        currentMusicId: newTrackId,
+        isMusicPlaying: newTrackId !== null,
+        musicCurrentTime: 0,
         musicProgress: newProgress,
       };
     }
