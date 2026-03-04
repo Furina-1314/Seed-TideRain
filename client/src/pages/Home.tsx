@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense } from "react";
-import { useGame } from "@/contexts/GameContext";
+import { useGame, type StickyNote as StickyNoteEntry } from "@/contexts/GameContext";
 import TimerPanel from "@/components/TimerPanel";
 import SoundPanel from "@/components/SoundPanel";
 import PlantInfo from "@/components/PlantInfo";
@@ -56,6 +56,82 @@ function CustomBackground() {
   );
 }
 
+
+function StickyNotesOverlay({
+  stickyNotes,
+  noteMap,
+  onMove,
+  onUpdate,
+  onClose,
+  onColor,
+}: {
+  stickyNotes: StickyNoteEntry[];
+  noteMap: Map<string, { id: string; content: string }>;
+  onMove: (id: string, x: number, y: number) => void;
+  onUpdate: (id: string, content: string) => void;
+  onClose: (id: string) => void;
+  onColor: (id: string, color: string) => void;
+}) {
+  return (
+    <>
+      {stickyNotes.map((sticky) => {
+        const note = noteMap.get(sticky.noteId);
+        if (!note) return null;
+
+        return (
+          <div
+            key={sticky.id}
+            className="absolute z-30 w-56 rounded-xl border border-gray-200 shadow-lg backdrop-blur-sm"
+            style={{ left: sticky.x, top: sticky.y, backgroundColor: sticky.color || "#ffffff" }}
+          >
+            <div
+              className="flex items-center justify-between px-2 py-1 bg-yellow-200/80 rounded-t-xl cursor-move"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const originX = sticky.x;
+                const originY = sticky.y;
+
+                const handleMove = (moveEvent: MouseEvent) => {
+                  onMove(sticky.id, originX + moveEvent.clientX - startX, originY + moveEvent.clientY - startY);
+                };
+                const handleUp = () => {
+                  document.removeEventListener("mousemove", handleMove);
+                  document.removeEventListener("mouseup", handleUp);
+                };
+                document.addEventListener("mousemove", handleMove);
+                document.addEventListener("mouseup", handleUp);
+              }}
+            >
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-gray-700 font-semibold">便利贴</span>
+                {["#ffffff", "#fff4b2", "#ffd9e8", "#d9f0ff", "#e6ffd9"].map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => onColor(sticky.id, color)}
+                    className={`w-3.5 h-3.5 rounded-full border ${sticky.color === color ? "border-gray-700" : "border-gray-300"}`}
+                    style={{ backgroundColor: color }}
+                    title="设置便利贴颜色"
+                  />
+                ))}
+              </div>
+              <button onClick={() => onClose(sticky.id)} className="p-1 rounded hover:bg-gray-200/70 text-gray-700">
+                <X size={12} />
+              </button>
+            </div>
+            <textarea
+              value={note.content}
+              onChange={(e) => onUpdate(note.id, e.target.value)}
+              className="w-full h-32 resize-none bg-transparent p-2 text-xs text-gray-700 focus:outline-none"
+            />
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 export default function Home() {
   const [rightTab, setRightTab] = useState<RightTab>("todos");
   const [leftCollapsed, setLeftCollapsed] = useState(false);
@@ -63,6 +139,7 @@ export default function Home() {
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const { state, dispatch } = useGame();
 
   const rightTabs: { id: RightTab; label: string; icon: typeof FileText }[] = [
     { id: "todos", label: "待办", icon: FileText },
@@ -80,6 +157,8 @@ export default function Home() {
 
   ];
 
+  const noteMap = new Map(state.notes.map((n) => [n.id, n]));
+
   const renderRightContent = () => {
     switch (rightTab) {
       case "todos": return <NotesPanel />;
@@ -94,15 +173,17 @@ export default function Home() {
       {/* 背景层 */}
       <div className="absolute inset-0 pointer-events-none">
         {/* 随机背景图（50%概率显示 clouds-bg 或 hero-bg）*/}
-        <div 
-          className="absolute inset-0 opacity-35" 
-          style={{ 
-            backgroundImage: `url(${RANDOM_BG})`, 
-            backgroundSize: "cover", 
-            backgroundPosition: IS_CLOUDS ? "center" : "center bottom",
-            maskImage: undefined
-          }} 
-        />
+        {!state.customBackground && (
+          <div
+            className="absolute inset-0 opacity-35"
+            style={{
+              backgroundImage: `url(${RANDOM_BG})`,
+              backgroundSize: "cover",
+              backgroundPosition: IS_CLOUDS ? "center" : "center bottom",
+              maskImage: undefined,
+            }}
+          />
+        )}
         {/* 自定义背景（如果有）*/}
         <CustomBackground />
       </div>
@@ -174,13 +255,43 @@ export default function Home() {
         </button>
 
         {/* 中间 */}
-        <div className="flex-1 relative flex items-center justify-center p-4">
+        <div
+          className="flex-1 relative flex items-center justify-center p-4"
+          onDragOver={(e) => {
+            if (e.dataTransfer.types.includes("application/x-note-id")) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "copy";
+            }
+          }}
+          onDrop={(e) => {
+            const noteId = e.dataTransfer.getData("application/x-note-id");
+            if (!noteId) return;
+            e.preventDefault();
+            const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+            dispatch({
+              type: "ADD_STICKY_NOTE",
+              payload: {
+                noteId,
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top,
+              },
+            });
+          }}
+        >
           <div className="w-full h-full max-w-2xl relative">
             <Suspense fallback={<div className="w-full h-full flex items-center justify-center"><Leaf size={40} className="text-emerald-400 animate-pulse" /></div>}>
               <PlantScene />
             </Suspense>
             <DialogBubble />
           </div>
+          <StickyNotesOverlay
+            stickyNotes={state.stickyNotes}
+            noteMap={noteMap}
+            onMove={(id, x, y) => dispatch({ type: "MOVE_STICKY_NOTE", payload: { id, x, y } })}
+            onUpdate={(id, content) => dispatch({ type: "UPDATE_NOTE", payload: { id, content } })}
+            onClose={(id) => dispatch({ type: "CLOSE_STICKY_NOTE", payload: id })}
+            onColor={(id, color) => dispatch({ type: "SET_STICKY_NOTE_COLOR", payload: { id, color } })}
+          />
         </div>
 
         {/* 右侧切换按钮 */}
