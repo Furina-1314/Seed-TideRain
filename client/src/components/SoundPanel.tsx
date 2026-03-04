@@ -642,7 +642,7 @@ export default function SoundPanel() {
     dispatch({ type: "PLAY_MUSIC_FROM_START", payload: trackId });
   };
 
-  // 判断当前混音是否与场景的默认设置一致
+  // 判断当前混音是否与场景的默认设置一致。
   const isSceneDefaultMix = () => {
     if (!state.activeScene) return false;
     const scene = SOUND_SCENES.find((s) => s.id === state.activeScene);
