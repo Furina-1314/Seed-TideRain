@@ -1,7 +1,7 @@
 import { useGame, type NoteEntry } from "@/contexts/GameContext";
 import { useState, useEffect, useRef } from "react";
 import { useDeleteConfirm } from "@/hooks/useDeleteConfirm";
-import { BookText, Plus, Edit2, Trash2, Check, X } from "lucide-react";
+import { BookText, Plus, Edit2, Trash2, Check, X, StickyNote } from "lucide-react";
 
 export default function NotesTextPanel() {
   const { state, dispatch } = useGame();
@@ -34,6 +34,12 @@ export default function NotesTextPanel() {
     dispatch({ type: "UPDATE_NOTE", payload: { id: editingId, content: editingContent.trim() } });
     setEditingId(null);
     setEditingContent("");
+  };
+
+  const handleDragStart = (e: React.DragEvent, note: NoteEntry) => {
+    e.dataTransfer.effectAllowed = "copy";
+    e.dataTransfer.setData("application/x-note-id", note.id);
+    e.dataTransfer.setData("text/plain", note.content);
   };
 
   // 点击外部取消添加
@@ -88,7 +94,7 @@ export default function NotesTextPanel() {
           <div className="text-center py-8 text-gray-400 text-sm">还没有笔记，点击右上角新建</div>
         ) : (
           state.notes.map((note) => (
-            <div key={note.id} className="bg-gray-50 rounded-xl p-3">
+            <div key={note.id} className="bg-gray-50 rounded-xl p-3" draggable={editingId !== note.id} onDragStart={(e) => handleDragStart(e, note)}>
               {editingId === note.id ? (
                 <>
                   <textarea
@@ -105,9 +111,9 @@ export default function NotesTextPanel() {
               ) : (
                 <>
                   <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{note.content}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-[10px] text-gray-400">创建于 {new Date(note.createdAt).toLocaleString("zh-CN")}</span>
-                    <div className="flex items-center gap-1">
+                  <div className="flex items-center justify-between mt-2 gap-2">
+                    <span className="text-[10px] text-gray-400 flex items-center gap-1"><StickyNote size={11} />拖到主界面生成便利贴</span>
+                    <div className="flex items-center gap-1 shrink-0">
                       <button onClick={() => startEdit(note)} className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"><Edit2 size={14} /></button>
                       {isConfirming(note.id) ? (
                         <div className="flex items-center gap-0.5">
