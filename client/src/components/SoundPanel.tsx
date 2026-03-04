@@ -5,7 +5,7 @@ import { saveMusicFile, deleteMusicFile, getMusicFileUrl } from "@/lib/musicStor
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   Volume2, VolumeX, Sliders, Sparkles, Music, 
-  Upload, Trash2, Edit2, Check, X, GripVertical, Play, Pause,
+  Upload, Trash2, GripVertical, Play, Pause,
   ListMusic, Repeat, Repeat1, ChevronLeft, ChevronRight,
   AlertCircle, RefreshCw
 } from "lucide-react";
@@ -65,21 +65,17 @@ function CustomSlider({ value, onChange }: { value: number; onChange: (v: number
   );
 }
 
-// 音乐轨道项 - 智能编辑版：单选编辑、ESC取消、Enter保存、失焦自动保存
+// 音乐轨道项
 interface MusicTrackItemProps {
   track: MusicTrack;
   index: number;
   isPlaying: boolean;
   isCurrent: boolean;
-  isEditing: boolean;
   currentTime?: number;
   duration?: number;
-  onPlay: () => void;
+  onSelect: () => void;
   onDelete: () => void;
-  onRename: (name: string) => void;
   onReupload: () => void;
-  onStartEdit: () => void;
-  onStopEdit: () => void;
   onDragStart: (e: React.DragEvent, index: number) => void;
   onDragOver: (e: React.DragEvent, index: number) => void;
   onDrop: (e: React.DragEvent, index: number) => void;
@@ -91,69 +87,16 @@ function MusicTrackItem({
   index,
   isPlaying,
   isCurrent,
-  isEditing,
   currentTime = 0,
   duration = 0,
-  onPlay,
+  onSelect,
   onDelete,
-  onRename,
   onReupload,
-  onStartEdit,
-  onStopEdit,
   onDragStart,
   onDragOver,
   onDrop,
   onSeek,
 }: MusicTrackItemProps) {
-  const [editName, setEditName] = useState(track.name);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // 当进入编辑状态时，重置编辑名称并聚焦
-  useEffect(() => {
-    if (isEditing) {
-      setEditName(track.name);
-      // 延迟聚焦，确保 input 已渲染
-      const timer = setTimeout(() => {
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      }, 10);
-      return () => clearTimeout(timer);
-    }
-  }, [isEditing, track.name]);
-
-  const handleSave = useCallback(() => {
-    const trimmed = editName.trim();
-    if (trimmed && trimmed !== track.name) {
-      onRename(trimmed);
-    }
-    onStopEdit();
-  }, [editName, track.name, onRename, onStopEdit]);
-
-  const handleCancel = useCallback(() => {
-    setEditName(track.name);
-    onStopEdit();
-  }, [track.name, onStopEdit]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSave();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      handleCancel();
-    }
-  }, [handleSave, handleCancel]);
-
-  const handleBlur = useCallback((e: React.FocusEvent) => {
-    // 检查焦点是否移动到了按钮上
-    const relatedTarget = e.relatedTarget as HTMLElement;
-    if (relatedTarget?.closest("[data-edit-action]")) {
-      return;
-    }
-    // 失去焦点时自动保存
-    handleSave();
-  }, [handleSave]);
-
   const isMissing = track.status === "missing";
   const isLoading = track.status === "loading";
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
@@ -167,167 +110,85 @@ function MusicTrackItem({
   };
 
   return (
-    <div 
+    <div
       className={`rounded-lg m-0.5 ${
         isCurrent && isPlaying
-          ? "bg-purple-100 border border-purple-300" 
-          : isMissing 
-            ? "bg-red-50/30 opacity-70" 
+          ? "bg-purple-100 border border-purple-300"
+          : isMissing
+            ? "bg-red-50/30 opacity-70"
             : "hover:bg-gray-50"
       }`}
-      draggable={!isMissing && !isEditing}
+      draggable={!isMissing}
       onDragStart={(e) => onDragStart(e, index)}
       onDragOver={(e) => onDragOver(e, index)}
       onDrop={(e) => onDrop(e, index)}
     >
-      {/* 主行 */}
       <div className="flex items-center gap-1.5 py-1.5 px-2">
-      {/* 拖拽手柄 */}
-      <div 
-        className={`shrink-0 ${
-          isMissing || isEditing ? "text-gray-200 cursor-default" : "text-gray-300 hover:text-gray-500 cursor-move"
-        }`}
-      >
-        <GripVertical size={14} />
-      </div>
-      
-      {/* 播放/状态按钮 */}
-      {isMissing ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={onReupload}
-              className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-red-100 text-red-500 hover:bg-red-200 transition-colors"
-            >
-              <RefreshCw size={12} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top" sideOffset={6}>文件已丢失，点击重新上传</TooltipContent>
-        </Tooltip>
-      ) : isLoading ? (
-        <div className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center bg-gray-100 text-gray-400">
-          <div className="w-3 h-3 border-2 border-gray-300 border-t-purple-500 rounded-full animate-spin" />
-        </div>
-      ) : (
-        <button 
-          onClick={onPlay}
-          className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all ${
-            isCurrent && isPlaying 
-              ? "bg-purple-500 text-white" 
-              : "bg-gray-100 text-gray-600 hover:bg-purple-100 hover:text-purple-600"
+        <div
+          className={`shrink-0 ${
+            isMissing ? "text-gray-200 cursor-default" : "text-gray-300 hover:text-gray-500 cursor-move"
           }`}
         >
-          {isCurrent && isPlaying ? <Pause size={12} /> : <Play size={12} className="ml-0.5" />}
-        </button>
-      )}
+          <GripVertical size={14} />
+        </div>
 
-      {/* 歌曲信息 */}
-      <div className="flex-1 min-w-0">
-        {isEditing ? (
-          <div className="flex items-center gap-0.5">
-            <input
-              ref={inputRef}
-              type="text"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              className="flex-1 text-xs px-1.5 py-1 rounded border border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white min-w-0"
-              onKeyDown={handleKeyDown}
-              onBlur={handleBlur}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button 
-                  data-edit-action="save"
-                  onClick={(e) => { e.stopPropagation(); handleSave(); }} 
-                  className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded transition-colors shrink-0"
-                >
-                  <Check size={12} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" sideOffset={6}>保存 (Enter)</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button 
-                  data-edit-action="cancel"
-                  onClick={(e) => { e.stopPropagation(); handleCancel(); }} 
-                  className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors shrink-0"
-                >
-                  <X size={12} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" sideOffset={6}>取消 (Esc)</TooltipContent>
-            </Tooltip>
-          </div>
-        ) : (
-          <div 
-            className="flex items-start gap-2 min-w-0 cursor-pointer"
-            onClick={onPlay}
-          >
-            <span className={`text-xs break-all leading-tight flex-1 ${
-              isCurrent ? "font-medium text-purple-700" : 
-              isMissing ? "text-red-600" : "text-gray-700"
-            }`}>
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={onSelect}>
+          <div className="flex items-start gap-2 min-w-0">
+            <span
+              className={`text-xs break-all leading-tight flex-1 ${
+                isCurrent ? "font-medium text-purple-700" : isMissing ? "text-red-600" : "text-gray-700"
+              }`}
+            >
               {track.name}
             </span>
             {isMissing && (
               <button
-                onClick={(e) => { e.stopPropagation(); onReupload(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReupload();
+                }}
                 className="flex items-center gap-0.5 px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-[10px] hover:bg-red-200 transition-colors shrink-0"
               >
                 <RefreshCw size={10} />
                 重新上传
               </button>
             )}
+            {isLoading && (
+              <div className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center bg-gray-100 text-gray-400">
+                <div className="w-2.5 h-2.5 border-2 border-gray-300 border-t-purple-500 rounded-full animate-spin" />
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+            >
+              <Trash2 size={12} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" sideOffset={6}>删除</TooltipContent>
+        </Tooltip>
       </div>
 
-      {/* 操作按钮 - 非编辑状态可见 */}
-      {!isEditing && (
-        <div className="flex items-center gap-0.5 shrink-0">
-          {!isMissing && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); onStartEdit(); }} 
-                  className="p-1 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded"
-                >
-                  <Edit2 size={12} />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" sideOffset={6}>重命名</TooltipContent>
-            </Tooltip>
-          )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button 
-                onClick={(e) => { e.stopPropagation(); onDelete(); }} 
-                className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
-              >
-                <Trash2 size={12} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top" sideOffset={6}>删除</TooltipContent>
-          </Tooltip>
-        </div>
-      )}
-      </div>
-      
-      {/* 进度条 - 仅当前播放歌曲显示 */}
       {isCurrent && onSeek && (
         <div className="px-2 pb-1.5">
           <div className="flex items-center gap-1.5">
             <span className="text-[9px] text-gray-400 w-7 text-right">
               {Math.floor(currentTime / 60)}:{String(Math.floor(currentTime % 60)).padStart(2, "0")}
             </span>
-            <div 
+            <div
               className="flex-1 h-4 flex items-center cursor-pointer group"
               onMouseDown={(e) => {
                 e.preventDefault();
                 handleSeek(e);
-                
+
                 const handleMouseMove = (moveEvent: MouseEvent) => {
                   if (!onSeek) return;
                   const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -335,21 +196,18 @@ function MusicTrackItem({
                   const percentage = Math.max(0, Math.min(1, x / rect.width));
                   onSeek(percentage * duration);
                 };
-                
+
                 const handleMouseUp = () => {
                   document.removeEventListener("mousemove", handleMouseMove);
                   document.removeEventListener("mouseup", handleMouseUp);
                 };
-                
+
                 document.addEventListener("mousemove", handleMouseMove);
                 document.addEventListener("mouseup", handleMouseUp);
               }}
             >
               <div className="relative w-full h-1 bg-gray-300 rounded-full overflow-hidden">
-                <div 
-                  className="absolute left-0 top-0 h-full bg-purple-500 rounded-full" 
-                  style={{ width: `${progress}%` }} 
-                />
+                <div className="absolute left-0 top-0 h-full bg-purple-500 rounded-full" style={{ width: `${progress}%` }} />
               </div>
             </div>
             <span className="text-[9px] text-gray-400 w-7">
@@ -510,7 +368,6 @@ export default function SoundPanel() {
   const previousMixRef = useRef<Record<string, number>>({});
   const previousSceneRef = useRef<string | null>(null);
   const [reuploadTrack, setReuploadTrack] = useState<MusicTrack | null>(null);
-  const [editingTrackId, setEditingTrackId] = useState<string | null>(null);
   
   // 恢复上次状态
   const [showRestoreButton, setShowRestoreButton] = useState(false);
@@ -760,10 +617,6 @@ export default function SoundPanel() {
     } else {
       dispatch({ type: "PLAY_MUSIC", payload: trackId });
     }
-  };
-
-  const handleRenameTrack = (trackId: string, newName: string) => {
-    dispatch({ type: "UPDATE_MUSIC_TRACK", payload: { id: trackId, name: newName } });
   };
 
   // 判断当前混音是否与场景的默认设置一致
@@ -1019,22 +872,33 @@ export default function SoundPanel() {
                 <div className="flex items-center gap-1">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button 
+                      <button
                         onClick={playPrevious}
-                        className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-purple-600 transition-colors"
+                        className="p-2.5 rounded-xl text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors"
                       >
-                        <ChevronLeft size={18} />
+                        <ChevronLeft size={22} strokeWidth={2.8} />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" sideOffset={6}>上一首</TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button 
-                        onClick={playNext}
-                        className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-purple-600 transition-colors"
+                      <button
+                        onClick={() => { const id = state.currentMusicId ?? state.musicTracks[0]?.id; if (id) togglePlay(id); }}
+                        className="p-2.5 rounded-xl text-white bg-purple-500 hover:bg-purple-600 transition-colors"
                       >
-                        <ChevronRight size={18} />
+                        {isPlaying ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={6}>{isPlaying ? "暂停" : "播放"}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={playNext}
+                        className="p-2.5 rounded-xl text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors"
+                      >
+                        <ChevronRight size={22} strokeWidth={2.8} />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" sideOffset={6}>下一首</TooltipContent>
@@ -1068,15 +932,11 @@ export default function SoundPanel() {
                       index={index}
                       isPlaying={state.isMusicPlaying}
                       isCurrent={isCurrent}
-                      isEditing={editingTrackId === track.id}
                       currentTime={displayTime}
                       duration={displayDuration}
-                      onPlay={() => handlePlayMusic(track.id)}
+                      onSelect={() => handlePlayMusic(track.id)}
                       onDelete={() => void handleDeleteTrack(track.id)}
-                      onRename={(name) => handleRenameTrack(track.id, name)}
                       onReupload={() => setReuploadTrack(track)}
-                      onStartEdit={() => setEditingTrackId(track.id)}
-                      onStopEdit={() => setEditingTrackId(null)}
                       onDragStart={handleDragStart}
                       onDragOver={handleDragOver}
                       onDrop={handleDrop}

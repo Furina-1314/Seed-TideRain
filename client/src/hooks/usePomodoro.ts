@@ -14,6 +14,7 @@ export function usePomodoro() {
 
   useEffect(() => {
     if (state.isTimerRunning) {
+      clearTimer();
       intervalRef.current = setInterval(() => {
         dispatch({ type: "TICK" });
       }, 1000);
@@ -73,6 +74,14 @@ export function usePomodoro() {
     dispatch({ type: "COMPLETE_SESSION", payload: { completedFocusSeconds: completed } });
   }, [dispatch, state.timerMode, state.pomodoroMinutes, state.timeRemaining]);
 
+  const endRound = useCallback(() => {
+    const total = state.pomodoroMinutes * 60;
+    const completed = state.timerMode === "focus"
+      ? Math.max(0, total - state.timeRemaining)
+      : 0;
+    dispatch({ type: "COMPLETE_SESSION", payload: { completedFocusSeconds: completed, endRound: true } });
+  }, [dispatch, state.timerMode, state.pomodoroMinutes, state.timeRemaining]);
+
   const formatTime = useCallback((seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -93,5 +102,6 @@ export function usePomodoro() {
     pause,
     reset,
     fastForward,
+    endRound,
   };
 }

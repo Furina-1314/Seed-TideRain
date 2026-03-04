@@ -366,7 +366,7 @@ type GameAction =
   | { type: "PAUSE_TIMER" }
   | { type: "RESET_TIMER" }
   | { type: "TICK" }
-  | { type: "COMPLETE_SESSION"; payload?: { completedFocusSeconds?: number } }
+  | { type: "COMPLETE_SESSION"; payload?: { completedFocusSeconds?: number; endRound?: boolean } }
   | { type: "SET_POMODORO_MINUTES"; payload: number }
   | { type: "SET_BREAK_MINUTES"; payload: number }
   | { type: "SET_POMODORO_CYCLES"; payload: number }
@@ -484,28 +484,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       const isConsecutive = state.lastSessionDate === new Date(Date.now() - 86400000).toDateString()
         || state.lastSessionDate === today;
 
-      if (state.timerMode === "focus") {
-        const completedFocusSeconds = Math.max(0, Math.min(
-          state.pomodoroMinutes * 60,
-          action.payload?.completedFocusSeconds ?? state.pomodoroMinutes * 60,
-        ));
-
-        const accumulatedSeconds = state.cycleAccumulatedFocusSeconds + completedFocusSeconds;
-        const accumulatedPomodoros = state.cycleAccumulatedPomodoros + 1;
-        const cycleFinished = state.currentCycle >= state.pomodoroCycles;
-
-        if (!cycleFinished) {
-          return {
-            ...state,
-            isTimerRunning: true,
-            timerMode: "break",
-            currentCycle: state.currentCycle,
-            timeRemaining: state.breakMinutes * 60,
-            cycleAccumulatedFocusSeconds: accumulatedSeconds,
-            cycleAccumulatedPomodoros: accumulatedPomodoros,
-          };
-        }
-
+      const settleRound = (accumulatedSeconds: number, accumulatedPomodoros: number): GameState => {
         const settledMinutes = Math.floor(accumulatedSeconds / 60);
         const affectionGain = settledMinutes > 0 ? Math.max(1, Math.floor(settledMinutes * 0.8)) : 0;
         const newStreak = isConsecutive || state.lastSessionDate === today
@@ -522,14 +501,26 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             )
           : [...state.heatmapData, { date: todayStr, minutes: settledMinutes, sessions: accumulatedPomodoros }];
 
+        const nextSessions = settledMinutes > 0 || accumulatedPomodoros > 0
+          ? [
+              ...state.sessions,
+              {
+                id: Date.now().toString(),
+                startTime: new Date().toISOString(),
+                duration: settledMinutes,
+                completed: true,
+              },
+            ]
+          : state.sessions;
+
         return {
           ...state,
           affection: Math.max(0, (Number.isFinite(state.affection) ? state.affection : 0) + affectionGain),
           totalFocusMinutes: state.totalFocusMinutes + settledMinutes,
           sessionsCompleted: state.sessionsCompleted + accumulatedPomodoros,
-          currentStreak: newStreak,
-          longestStreak: Math.max(state.longestStreak, newStreak),
-          lastSessionDate: today,
+          currentStreak: accumulatedPomodoros > 0 ? newStreak : state.currentStreak,
+          longestStreak: accumulatedPomodoros > 0 ? Math.max(state.longestStreak, newStreak) : state.longestStreak,
+          lastSessionDate: accumulatedPomodoros > 0 ? today : state.lastSessionDate,
           isTimerRunning: false,
           timerMode: "focus",
           currentCycle: 1,
@@ -538,19 +529,39 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           cycleAccumulatedFocusSeconds: 0,
           cycleAccumulatedPomodoros: 0,
           heatmapData: updatedHeatmap,
-          sessions: [
-            ...state.sessions,
-            {
-              id: Date.now().toString(),
-              startTime: new Date().toISOString(),
-              duration: settledMinutes,
-              completed: true,
-            },
-          ],
+          sessions: nextSessions,
         };
+      };
+
+      if (state.timerMode === "focus") {
+        const completedFocusSeconds = Math.max(0, Math.min(
+          state.pomodoroMinutes * 60,
+          action.payload?.completedFocusSeconds ?? state.pomodoroMinutes * 60,
+        ));
+
+        const accumulatedSeconds = state.cycleAccumulatedFocusSeconds + completedFocusSeconds;
+        const accumulatedPomodoros = state.cycleAccumulatedPomodoros + 1;
+        const cycleFinished = Boolean(action.payload?.endRound) || state.currentCycle >= state.pomodoroCycles;
+
+        if (!cycleFinished) {
+          return {
+            ...state,
+            isTimerRunning: true,
+            timerMode: "break",
+            currentCycle: state.currentCycle,
+            timeRemaining: state.breakMinutes * 60,
+            cycleAccumulatedFocusSeconds: accumulatedSeconds,
+            cycleAccumulatedPomodoros: accumulatedPomodoros,
+          };
+        }
+
+        return settleRound(accumulatedSeconds, accumulatedPomodoros);
       }
 
-      // 休息完成 -> 自动进入下一轮专注并启动
+      if (action.payload?.endRound) {
+        return settleRound(state.cycleAccumulatedFocusSeconds, state.cycleAccumulatedPomodoros);
+      }
+
       return {
         ...state,
         isTimerRunning: true,
