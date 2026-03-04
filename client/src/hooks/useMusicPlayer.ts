@@ -58,11 +58,11 @@ export function useMusicPlayer() {
         audio.play().catch(() => dispatch({ type: "PAUSE_MUSIC" }));
       } else if (musicRepeatMode === "all") {
         const nextIndex = (currentIndex + 1) % musicTracks.length;
-        dispatch({ type: "PLAY_MUSIC", payload: musicTracks[nextIndex].id });
+        dispatch({ type: "PLAY_MUSIC_FROM_START", payload: musicTracks[nextIndex].id });
       } else {
         const nextIndex = currentIndex + 1;
         if (nextIndex < musicTracks.length) {
-          dispatch({ type: "PLAY_MUSIC", payload: musicTracks[nextIndex].id });
+          dispatch({ type: "PLAY_MUSIC_FROM_START", payload: musicTracks[nextIndex].id });
         } else {
           dispatch({ type: "PAUSE_MUSIC" });
         }
@@ -157,7 +157,7 @@ export function useMusicPlayer() {
     
     const currentIndex = musicTracks.findIndex((t) => t.id === currentMusicId);
     const nextIndex = (currentIndex + 1) % musicTracks.length;
-    dispatch({ type: "PLAY_MUSIC", payload: musicTracks[nextIndex].id });
+    dispatch({ type: "PLAY_MUSIC_FROM_START", payload: musicTracks[nextIndex].id });
   }, [state.musicTracks, state.currentMusicId, dispatch]);
 
   const playPrevious = useCallback(() => {
@@ -166,7 +166,7 @@ export function useMusicPlayer() {
     
     const currentIndex = musicTracks.findIndex((t) => t.id === currentMusicId);
     const prevIndex = currentIndex === 0 ? musicTracks.length - 1 : currentIndex - 1;
-    dispatch({ type: "PLAY_MUSIC", payload: musicTracks[prevIndex].id });
+    dispatch({ type: "PLAY_MUSIC_FROM_START", payload: musicTracks[prevIndex].id });
   }, [state.musicTracks, state.currentMusicId, dispatch]);
 
   const seekTo = useCallback((time: number) => {

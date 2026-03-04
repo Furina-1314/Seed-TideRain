@@ -33,6 +33,14 @@ export interface NoteEntry {
   updatedAt: string;
 }
 
+export interface StickyNote {
+  id: string;
+  noteId: string;
+  x: number;
+  y: number;
+  color: string;
+}
+
 export interface HabitEntry {
   id: string;
   name: string;
@@ -44,7 +52,6 @@ export interface HabitEntry {
 export interface FocusSession {
   id: string;
   startTime: string;
-  endTime: string; // 实际结束时间
   duration: number;
   completed: boolean;
 }
@@ -84,13 +91,17 @@ export interface GameState {
   // Pomodoro
   pomodoroMinutes: number;
   breakMinutes: number;
-  longBreakMinutes: number;
+  pomodoroCycles: number;
+  currentCycle: number;
   isTimerRunning: boolean;
-  timerMode: "focus" | "break" | "longBreak";
+  timerMode: "focus" | "break";
   timeRemaining: number;
-  currentSessionCount: number; // 当前番茄组内计数（1-4）
+  lastCycleCompletionMark: number;
+  cycleAccumulatedFocusSeconds: number;
+  cycleAccumulatedPomodoros: number;
+
+  // Legacy settings
   skipButtonLocked: boolean; // 跳过按钮是否锁定
-  currentSessionStartTime: string | null; // 当前专注开始时间
 
   // Sound — scene-based
   activeScene: string | null;
@@ -115,6 +126,7 @@ export interface GameState {
 
   // Notes
   notes: NoteEntry[];
+  stickyNotes: StickyNote[];
 
   // Habits
   habits: HabitEntry[];
@@ -363,11 +375,10 @@ type GameAction =
   | { type: "PAUSE_TIMER" }
   | { type: "RESET_TIMER" }
   | { type: "TICK" }
-  | { type: "COMPLETE_SESSION" }
+  | { type: "COMPLETE_SESSION"; payload?: { completedFocusSeconds?: number; endRound?: boolean } }
   | { type: "SET_POMODORO_MINUTES"; payload: number }
   | { type: "SET_BREAK_MINUTES"; payload: number }
-  | { type: "SET_LONG_BREAK_MINUTES"; payload: number }
-  | { type: "RESET_SESSION_COUNT" }
+  | { type: "SET_POMODORO_CYCLES"; payload: number }
   | { type: "TOGGLE_SKIP_BUTTON_LOCK" }
   | { type: "SET_SCENE"; payload: string | null }
   | { type: "SET_CUSTOM_MIX"; payload: Record<string, number> }
@@ -381,9 +392,14 @@ type GameAction =
   | { type: "ADD_NOTE"; payload: { content: string } }
   | { type: "UPDATE_NOTE"; payload: { id: string; content: string } }
   | { type: "DELETE_NOTE"; payload: string }
+  | { type: "ADD_STICKY_NOTE"; payload: { noteId: string; x: number; y: number } }
+  | { type: "MOVE_STICKY_NOTE"; payload: { id: string; x: number; y: number } }
+  | { type: "CLOSE_STICKY_NOTE"; payload: string }
+  | { type: "SET_STICKY_NOTE_COLOR"; payload: { id: string; color: string } }
   | { type: "ADD_HABIT"; payload: { name: string } }
   | { type: "TOGGLE_HABIT"; payload: string }
   | { type: "DELETE_HABIT"; payload: string }
+  | { type: "UPDATE_HABIT"; payload: { id: string; name: string } }
   | { type: "SET_DIARY_ENTRY"; payload: { date: string; content: string } }
   | { type: "SET_ACTIVE_PANEL"; payload: string | null }
   | { type: "SET_CUSTOM_BACKGROUND"; payload: string | null }
@@ -394,6 +410,7 @@ type GameAction =
   | { type: "DELETE_MUSIC_TRACK"; payload: string }
   | { type: "REORDER_MUSIC_TRACKS"; payload: MusicTrack[] }
   | { type: "PLAY_MUSIC"; payload: string | null }
+  | { type: "PLAY_MUSIC_FROM_START"; payload: string | null }
   | { type: "PAUSE_MUSIC" }
   | { type: "SET_CURRENT_MUSIC"; payload: string | null } // 只设置当前音乐，不自动播放
   | { type: "SET_MUSIC_VOLUME"; payload: number }
@@ -413,13 +430,15 @@ const initialState: GameState = {
   lastSessionDate: null,
   pomodoroMinutes: 25,
   breakMinutes: 5,
-  longBreakMinutes: 15,
-  currentSessionCount: 0,
+  pomodoroCycles: 4,
+  currentCycle: 1,
   skipButtonLocked: true,
-  currentSessionStartTime: null,
   isTimerRunning: false,
   timerMode: "focus",
   timeRemaining: 25 * 60,
+  lastCycleCompletionMark: 0,
+  cycleAccumulatedFocusSeconds: 0,
+  cycleAccumulatedPomodoros: 0,
   activeScene: null,
   customMix: {},
   masterVolume: 0.5,
@@ -436,6 +455,7 @@ const initialState: GameState = {
   memoTags: ["学习", "待查", "论文"],
   showDoneMemos: false,
   notes: [],
+  stickyNotes: [],
   habits: [],
   diaryEntries: {},
   customBackground: null,
@@ -454,13 +474,7 @@ function getDateStr(date: Date = new Date()): string {
 function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "START_TIMER":
-      // 只有在专注模式且之前没有记录开始时间时才记录
-      const shouldRecordStartTime = state.timerMode === "focus" && !state.currentSessionStartTime;
-      return { 
-        ...state, 
-        isTimerRunning: true,
-        currentSessionStartTime: shouldRecordStartTime ? new Date().toISOString() : state.currentSessionStartTime,
-      };
+      return { ...state, isTimerRunning: true };
 
     case "PAUSE_TIMER":
       return { ...state, isTimerRunning: false };
@@ -469,12 +483,12 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         isTimerRunning: false,
-        currentSessionStartTime: state.timerMode === "focus" ? null : state.currentSessionStartTime,
+        currentCycle: 1,
+        cycleAccumulatedFocusSeconds: 0,
+        cycleAccumulatedPomodoros: 0,
         timeRemaining: state.timerMode === "focus"
           ? state.pomodoroMinutes * 60
-          : state.timerMode === "longBreak"
-            ? state.longBreakMinutes * 60
-            : state.breakMinutes * 60,
+          : state.breakMinutes * 60,
       };
 
     case "TICK":
@@ -486,67 +500,91 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       const isConsecutive = state.lastSessionDate === new Date(Date.now() - 86400000).toDateString()
         || state.lastSessionDate === today;
 
-      if (state.timerMode === "focus") {
-        // 好感度计算：x分钟贡献 floor(x/2) + 连续天数奖励 max(0, streak-1)
-        const baseAffection = Math.floor(state.pomodoroMinutes / 2);
+      const settleRound = (accumulatedSeconds: number, accumulatedPomodoros: number): GameState => {
+        const settledMinutes = Math.floor(accumulatedSeconds / 60);
+        const affectionGain = settledMinutes > 0 ? Math.max(1, Math.floor(settledMinutes * 0.8)) : 0;
         const newStreak = isConsecutive || state.lastSessionDate === today
           ? (state.lastSessionDate === today ? state.currentStreak : state.currentStreak + 1)
           : 1;
-        const streakBonus = Math.max(0, newStreak - 1);
-        const affectionGain = baseAffection + streakBonus;
 
-        // Update heatmap
         const todayStr = getDateStr();
         const existingDay = state.heatmapData.find((d) => d.date === todayStr);
         const updatedHeatmap = existingDay
           ? state.heatmapData.map((d) =>
               d.date === todayStr
-                ? { ...d, minutes: d.minutes + state.pomodoroMinutes, sessions: d.sessions + 1 }
+                ? { ...d, minutes: d.minutes + settledMinutes, sessions: d.sessions + accumulatedPomodoros }
                 : d
             )
-          : [...state.heatmapData, { date: todayStr, minutes: state.pomodoroMinutes, sessions: 1 }];
+          : [...state.heatmapData, { date: todayStr, minutes: settledMinutes, sessions: accumulatedPomodoros }];
 
-        // 计算下一个番茄计数（1-4循环）
-        const nextSessionCount = state.currentSessionCount >= 3 ? 0 : state.currentSessionCount + 1;
-        // 每4个番茄后进入长休息
-        const isLongBreak = state.currentSessionCount >= 3;
+        const nextSessions = settledMinutes > 0 || accumulatedPomodoros > 0
+          ? [
+              ...state.sessions,
+              {
+                id: Date.now().toString(),
+                startTime: new Date().toISOString(),
+                duration: settledMinutes,
+                completed: true,
+              },
+            ]
+          : state.sessions;
 
         return {
           ...state,
-          affection: state.affection + affectionGain,
-          totalFocusMinutes: state.totalFocusMinutes + state.pomodoroMinutes,
-          sessionsCompleted: state.sessionsCompleted + 1,
-          currentStreak: newStreak,
-          longestStreak: Math.max(state.longestStreak, newStreak),
-          lastSessionDate: today,
-          currentSessionCount: nextSessionCount,
-          // 休息模式自动启动倒计时
-          isTimerRunning: true,
-          timerMode: isLongBreak ? "longBreak" : "break",
-          timeRemaining: (isLongBreak ? state.longBreakMinutes : state.breakMinutes) * 60,
-          heatmapData: updatedHeatmap,
-          sessions: [
-            ...state.sessions,
-            {
-              id: Date.now().toString(),
-              startTime: state.currentSessionStartTime || new Date().toISOString(),
-              endTime: new Date().toISOString(),
-              duration: state.pomodoroMinutes,
-              completed: true,
-            },
-          ],
-          currentSessionStartTime: null, // 重置开始时间
-        };
-      } else {
-        // 休息结束，回到专注模式
-        return {
-          ...state,
+          affection: Math.max(0, (Number.isFinite(state.affection) ? state.affection : 0) + affectionGain),
+          totalFocusMinutes: state.totalFocusMinutes + settledMinutes,
+          sessionsCompleted: state.sessionsCompleted + accumulatedPomodoros,
+          currentStreak: accumulatedPomodoros > 0 ? newStreak : state.currentStreak,
+          longestStreak: accumulatedPomodoros > 0 ? Math.max(state.longestStreak, newStreak) : state.longestStreak,
+          lastSessionDate: accumulatedPomodoros > 0 ? today : state.lastSessionDate,
           isTimerRunning: false,
           timerMode: "focus",
+          currentCycle: 1,
           timeRemaining: state.pomodoroMinutes * 60,
-          currentSessionStartTime: null, // 重置开始时间
+          lastCycleCompletionMark: Date.now(),
+          cycleAccumulatedFocusSeconds: 0,
+          cycleAccumulatedPomodoros: 0,
+          heatmapData: updatedHeatmap,
+          sessions: nextSessions,
         };
+      };
+
+      if (state.timerMode === "focus") {
+        const completedFocusSeconds = Math.max(0, Math.min(
+          state.pomodoroMinutes * 60,
+          action.payload?.completedFocusSeconds ?? state.pomodoroMinutes * 60,
+        ));
+
+        const accumulatedSeconds = state.cycleAccumulatedFocusSeconds + completedFocusSeconds;
+        const accumulatedPomodoros = state.cycleAccumulatedPomodoros + 1;
+        const cycleFinished = Boolean(action.payload?.endRound) || state.currentCycle >= state.pomodoroCycles;
+
+        if (!cycleFinished) {
+          return {
+            ...state,
+            isTimerRunning: true,
+            timerMode: "break",
+            currentCycle: state.currentCycle,
+            timeRemaining: state.breakMinutes * 60,
+            cycleAccumulatedFocusSeconds: accumulatedSeconds,
+            cycleAccumulatedPomodoros: accumulatedPomodoros,
+          };
+        }
+
+        return settleRound(accumulatedSeconds, accumulatedPomodoros);
       }
+
+      if (action.payload?.endRound) {
+        return settleRound(state.cycleAccumulatedFocusSeconds, state.cycleAccumulatedPomodoros);
+      }
+
+      return {
+        ...state,
+        isTimerRunning: true,
+        timerMode: "focus",
+        currentCycle: Math.min(state.currentCycle + 1, state.pomodoroCycles),
+        timeRemaining: state.pomodoroMinutes * 60,
+      };
     }
 
     case "SET_POMODORO_MINUTES":
@@ -567,19 +605,11 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           : state.timeRemaining,
       };
 
-    case "SET_LONG_BREAK_MINUTES":
+    case "SET_POMODORO_CYCLES":
       return {
         ...state,
-        longBreakMinutes: action.payload,
-        timeRemaining: state.timerMode === "longBreak" && !state.isTimerRunning
-          ? action.payload * 60
-          : state.timeRemaining,
-      };
-
-    case "RESET_SESSION_COUNT":
-      return {
-        ...state,
-        currentSessionCount: 0,
+        pomodoroCycles: action.payload,
+        currentCycle: Math.min(state.currentCycle, action.payload),
       };
 
     case "TOGGLE_SKIP_BUTTON_LOCK":
@@ -694,6 +724,14 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case "DELETE_HABIT":
       return { ...state, habits: state.habits.filter((h) => h.id !== action.payload) };
 
+    case "UPDATE_HABIT":
+      return {
+        ...state,
+        habits: state.habits.map((h) =>
+          h.id === action.payload.id ? { ...h, name: action.payload.name.trim() || h.name } : h
+        ),
+      };
+
     case "ADD_NOTE": {
       const now = new Date().toISOString();
       return {
@@ -716,7 +754,53 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       };
 
     case "DELETE_NOTE":
-      return { ...state, notes: state.notes.filter((note) => note.id !== action.payload) };
+      return {
+        ...state,
+        notes: state.notes.filter((note) => note.id !== action.payload),
+        stickyNotes: state.stickyNotes.filter((sticky) => sticky.noteId !== action.payload),
+      };
+
+    case "ADD_STICKY_NOTE": {
+      const exists = state.notes.some((n) => n.id === action.payload.noteId);
+      if (!exists) return state;
+      return {
+        ...state,
+        stickyNotes: [
+          ...state.stickyNotes,
+          {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            noteId: action.payload.noteId,
+            x: action.payload.x,
+            y: action.payload.y,
+            color: "#ffffff",
+          },
+        ],
+      };
+    }
+
+    case "MOVE_STICKY_NOTE":
+      return {
+        ...state,
+        stickyNotes: state.stickyNotes.map((sticky) =>
+          sticky.id === action.payload.id
+            ? { ...sticky, x: action.payload.x, y: action.payload.y }
+            : sticky
+        ),
+      };
+
+    case "CLOSE_STICKY_NOTE":
+      return {
+        ...state,
+        stickyNotes: state.stickyNotes.filter((sticky) => sticky.id !== action.payload),
+      };
+
+    case "SET_STICKY_NOTE_COLOR":
+      return {
+        ...state,
+        stickyNotes: state.stickyNotes.map((sticky) =>
+          sticky.id === action.payload.id ? { ...sticky, color: action.payload.color } : sticky
+        ),
+      };
 
     case "SET_DIARY_ENTRY":
       return {
@@ -844,6 +928,26 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         currentMusicId: newTrackId,
         isMusicPlaying: newTrackId !== null,
         musicCurrentTime: savedProgress,
+        musicProgress: newProgress,
+      };
+    }
+
+    case "PLAY_MUSIC_FROM_START": {
+      const newTrackId = action.payload;
+
+      const newProgress = state.currentMusicId
+        ? { ...state.musicProgress, [state.currentMusicId]: state.musicCurrentTime }
+        : { ...state.musicProgress };
+
+      if (newTrackId) {
+        newProgress[newTrackId] = 0;
+      }
+
+      return {
+        ...state,
+        currentMusicId: newTrackId,
+        isMusicPlaying: newTrackId !== null,
+        musicCurrentTime: 0,
         musicProgress: newProgress,
       };
     }
@@ -977,9 +1081,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           const savedTimeRemaining = parsed.timeRemaining;
           const totalTime = parsed.timerMode === "focus"
             ? (parsed.pomodoroMinutes || 25) * 60
-            : parsed.timerMode === "longBreak"
-              ? (parsed.longBreakMinutes || 15) * 60
-              : (parsed.breakMinutes || 5) * 60;
+            : (parsed.breakMinutes || 5) * 60;
           
           // 确保剩余时间有效（在 0 到总时长之间）
           const validTimeRemaining = savedTimeRemaining > 0 && savedTimeRemaining <= totalTime
@@ -1011,6 +1113,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
               ...parsed,
               musicTracks: validatedTracks,
               isTimerRunning: false,
+              timerMode: parsed.timerMode === "focus" ? "focus" : "break",
               timeRemaining: validTimeRemaining,
               // 清空场景和混音
               activeScene: null,

@@ -2,7 +2,7 @@ import { useGame } from "@/contexts/GameContext";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useDeleteConfirm } from "@/hooks/useDeleteConfirm";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Trash2, CheckCircle2, Circle, Target, Flame, Trophy, Calendar, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, Circle, Target, Flame, Trophy, Calendar, ChevronDown, ChevronUp, X, Edit2, Check } from "lucide-react";
 
 function Celebration({ show, onComplete }: { show: boolean; onComplete: () => void }) {
   useEffect(() => {
@@ -26,6 +26,8 @@ export default function HabitsPanel() {
   const [isAdding, setIsAdding] = useState(false);
   const [celebratingId, setCelebratingId] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(true);
+  const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
+  const [editingHabitName, setEditingHabitName] = useState("");
   const addFormRef = useRef<HTMLDivElement>(null);
 
   const handleAdd = () => {
@@ -38,6 +40,23 @@ export default function HabitsPanel() {
   const handleToggle = (habitId: string, completed: boolean) => {
     if (!completed) setCelebratingId(habitId);
     dispatch({ type: "TOGGLE_HABIT", payload: habitId });
+  };
+
+  const startEditHabit = (id: string, name: string) => {
+    setEditingHabitId(id);
+    setEditingHabitName(name);
+  };
+
+  const saveEditHabit = () => {
+    if (!editingHabitId) return;
+    if (!editingHabitName.trim()) {
+      setEditingHabitId(null);
+      setEditingHabitName("");
+      return;
+    }
+    dispatch({ type: "UPDATE_HABIT", payload: { id: editingHabitId, name: editingHabitName } });
+    setEditingHabitId(null);
+    setEditingHabitName("");
   };
 
   const handleCelebrationComplete = useCallback(() => setCelebratingId(null), []);
@@ -222,7 +241,29 @@ export default function HabitsPanel() {
                   <Circle size={22} className="text-gray-300 hover:text-gray-400 transition-colors" />
                 )}
               </button>
-              <span className={`flex-1 text-sm ${habit.completed ? "line-through text-gray-400" : "text-gray-700"}`}>{habit.name}</span>
+              <div className="flex-1 min-w-0">
+                {editingHabitId === habit.id ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      value={editingHabitName}
+                      onChange={(e) => setEditingHabitName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveEditHabit();
+                        if (e.key === "Escape") {
+                          setEditingHabitId(null);
+                          setEditingHabitName("");
+                        }
+                      }}
+                      autoFocus
+                      className="w-full px-2 py-1 rounded-lg bg-white border border-emerald-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                    />
+                    <button onClick={saveEditHabit} className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50"><Check size={14} /></button>
+                    <button onClick={() => { setEditingHabitId(null); setEditingHabitName(""); }} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"><X size={14} /></button>
+                  </div>
+                ) : (
+                  <span className={`text-sm ${habit.completed ? "line-through text-gray-400" : "text-gray-700"}`}>{habit.name}</span>
+                )}
+              </div>
               {habit.streak > 0 && (
                 <span className={`flex items-center gap-0.5 text-xs font-medium shrink-0 ${habit.streak >= 7 ? "text-orange-500" : "text-amber-500"}`}>
                   <Flame size={14} className={habit.streak >= 7 ? "fill-orange-500" : "fill-amber-500"} />
@@ -236,9 +277,14 @@ export default function HabitsPanel() {
                   <button onClick={cancelDelete} className="p-1 rounded text-gray-400 hover:bg-gray-100"><X size={12} /></button>
                 </div>
               ) : (
-                <button onClick={() => requestDelete(habit.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500 shrink-0 p-1.5 rounded-lg hover:bg-red-50">
-                  <Trash2 size={14} />
-                </button>
+                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => startEditHabit(habit.id, habit.name)} className="text-gray-400 hover:text-emerald-600 p-1.5 rounded-lg hover:bg-emerald-50">
+                    <Edit2 size={14} />
+                  </button>
+                  <button onClick={() => requestDelete(habit.id)} className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               )}
             </div>
           ))
