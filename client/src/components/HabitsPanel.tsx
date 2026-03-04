@@ -264,12 +264,6 @@ export default function HabitsPanel() {
                   <span className={`text-sm ${habit.completed ? "line-through text-gray-400" : "text-gray-700"}`}>{habit.name}</span>
                 )}
               </div>
-              {habit.streak > 0 && (
-                <span className={`flex items-center gap-0.5 text-xs font-medium shrink-0 ${habit.streak >= 7 ? "text-orange-500" : "text-amber-500"}`}>
-                  <Flame size={14} className={habit.streak >= 7 ? "fill-orange-500" : "fill-amber-500"} />
-                  {habit.streak}
-                </span>
-              )}
               {isConfirming(habit.id) ? (
                 <div className="flex items-center gap-1 shrink-0">
                   <span className="text-[10px] text-gray-500">确定？</span>
@@ -285,6 +279,12 @@ export default function HabitsPanel() {
                     <Trash2 size={14} />
                   </button>
                 </div>
+              )}
+                            {habit.streak > 0 && (
+                <span className={`flex items-center gap-0.5 text-xs font-medium shrink-0 ${habit.streak >= 7 ? "text-orange-500" : "text-amber-500"}`}>
+                  <Flame size={14} className={habit.streak >= 7 ? "fill-orange-500" : "fill-amber-500"} />
+                  {habit.streak}
+                </span>
               )}
             </div>
           ))
