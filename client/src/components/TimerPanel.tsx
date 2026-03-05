@@ -141,7 +141,7 @@ export default function TimerPanel({ compact = false }: TimerPanelProps) {
   const handleCelebrationComplete = useCallback(() => setShowCelebration(false), []);
 
   const handleQuickAction = () => {
-    if (isRunning && state.skipButtonLocked) return;
+    if (state.skipButtonLocked) return;
     if (mode === "focus") {
       fastForward();
       return;
@@ -163,16 +163,14 @@ export default function TimerPanel({ compact = false }: TimerPanelProps) {
   const circumference = 2 * Math.PI * circleSize;
   const strokeDashoffset = circumference * (1 - progress);
   const progressColor = mode === "focus" ? "#10b981" : "#f59e0b";
-  const isSkipLocked = isRunning && state.skipButtonLocked;
+  const isSkipLocked = state.skipButtonLocked;
   const hasRoundStarted = state.timerMode !== "focus"
     || state.isTimerRunning
     || state.timeRemaining < state.pomodoroMinutes * 60
     || state.cycleAccumulatedFocusSeconds > 0
     || state.cycleAccumulatedPomodoros > 0;
 
-  //const totalFocusMinutesFromHistory = state.sessions.reduce((sum, s) => sum + s.duration, 0);
-  const totalFocusMinutesFromHistory = state.totalFocusMinutes; //直接使用当前总专注分钟数，避免重复计算历史记录时专注时间增益导致的误差  
-  //const totalAffectionFromHistory = state.sessions.reduce((sum, s) => sum + Math.max(1, Math.floor(s.duration * 0.8)), 0);
+  const totalFocusMinutesFromHistory = state.totalFocusMinutes;
   const totalAffectionFromHistory = state.affection; //直接使用当前好感度数值，避免重复计算历史记录时好感度增益导致的误差
 
   if (showHistory) {
@@ -247,21 +245,22 @@ export default function TimerPanel({ compact = false }: TimerPanelProps) {
       </div>
 
       <div className="flex items-center justify-center gap-4 shrink-0 mt-2">
-        {hasRoundStarted?(<button
+        {hasRoundStarted ? (
+          <button
           onClick={handleQuickAction}
           disabled={isSkipLocked}
           className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isSkipLocked ? "bg-gray-100 text-gray-300 cursor-not-allowed" : "bg-gray-100 hover:bg-gray-200"}`}
           title={isSkipLocked ? "已锁定跳过/结束" : mode === "focus" ? "快进当前番茄" : "结束休息"}
-        >
-          <FastForward size={20} className={isSkipLocked ? "text-gray-300" : "text-gray-600"} />
-        </button>
-        ):null}
+          >
+            <FastForward size={20} className={isSkipLocked ? "text-gray-300" : "text-gray-600"} />
+          </button>
+        ) : null}
         
         <button onClick={isRunning ? pause : start} className={`relative z-30 w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 ${isRunning ? "bg-amber-400 hover:bg-amber-500 text-white" : mode === "focus" ? "bg-emerald-500 hover:bg-emerald-600 text-white" : "bg-amber-500 hover:bg-amber-600 text-white"}`}>
           {isRunning ? <Pause size={32} /> : <Play size={32} className="ml-1" />}
         </button>
 
-        {isRunning ? (
+        {hasRoundStarted ? (
           <button
             onClick={endRound}
             disabled={isSkipLocked}
@@ -271,11 +270,9 @@ export default function TimerPanel({ compact = false }: TimerPanelProps) {
             <Square size={18} className={isSkipLocked ? "text-gray-300 fill-gray-300" : "text-red-600 fill-red-600"} />
           </button>
         ) : (
-          mode === "focus" && !hasRoundStarted && (
-            <button onClick={() => setShowSettings(true)} className="w-12 h-12 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors" title="设置">
-              <Settings size={20} className="text-gray-600" />
-            </button>
-          )
+          <button onClick={() => setShowSettings(true)} className="w-12 h-12 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors" title="设置">
+            <Settings size={20} className="text-gray-600" />
+          </button>
         )}
       </div>
     </div>
