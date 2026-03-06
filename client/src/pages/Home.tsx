@@ -248,20 +248,25 @@ export default function Home() {
       {/* 桌面端布局 */}
       <div className="relative z-10 h-full hidden lg:flex">
         {/* 左侧面板 - 移除 Logo，空间留给音效 */}
-        <div className={`shrink-0 h-full flex flex-col transition-all duration-300 ${leftCollapsed ? "w-0 opacity-0" : "w-[560px] opacity-100"}`}>
-          <div className="h-full p-4 grid grid-cols-[320px_220px] gap-3 overflow-hidden">
-            {/* 左上：番茄钟 */}
+        <div className={`shrink-0 h-full flex flex-col transition-all duration-300 ${leftCollapsed ? "w-0 opacity-0" : "w-[340px] opacity-100"}`}>
+          <div className="h-full p-4 grid grid-cols-1 gap-3 overflow-hidden">
             <div className="shrink-0">
               <TimerPanel compact />
             </div>
-            {/* 右侧：时钟（横向比例） */}
-            <div className="h-[120px]">
-              <SystemClock />
-            </div>
-            {/* 音效面板 - 与番茄钟同宽对齐 */}
-            <div className="min-h-0 col-start-1 row-start-2">
+            <div className="min-h-0">
               <SoundPanel />
             </div>
+          </div>
+        </div>
+
+        {/* 时钟保持独立：左侧收起时也可见，并移动到页面左侧 */}
+        <div
+          className={`absolute top-4 z-20 transition-all duration-300 ${
+            leftCollapsed ? "left-4" : "left-[344px]"
+          }`}
+        >
+          <div className="w-[220px] h-[120px]">
+            <SystemClock />
           </div>
         </div>
 
