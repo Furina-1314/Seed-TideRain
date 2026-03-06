@@ -290,16 +290,16 @@ export default function HabitsPanel() {
                 </div>
               )}
               <div className="flex items-center gap-2 shrink-0">
-                {habit.accumulate > 0 && (
-                  <span className="flex items-center gap-0.5 text-xs font-medium text-amber-600">
-                    <Trophy size={14} />
-                    {habit.accumulate}
-                  </span>
-                )}
                 {habit.streak > 0 && (
                   <span className={`flex items-center gap-0.5 text-xs font-medium ${habit.streak >= 7 ? "text-orange-500" : "text-amber-500"}`}>
                     <Flame size={14} className={habit.streak >= 7 ? "fill-orange-500" : "fill-amber-500"} />
                     {habit.streak}
+                  </span>
+                )}
+                {habit.accumulate > 0 && (
+                  <span className="flex items-center gap-0.5 text-xs font-medium text-amber-600">
+                    <Trophy size={14} />
+                    {habit.accumulate}
                   </span>
                 )}
               </div>
