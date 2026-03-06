@@ -2,17 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 
 function formatLunarDate(date: Date) {
   const lunarFormatter = new Intl.DateTimeFormat("zh-CN-u-ca-chinese", {
-    year: "numeric",
     month: "long",
     day: "numeric",
   });
 
   const parts = lunarFormatter.formatToParts(date);
-  const year = parts.find((part) => String(part.type) === "relatedYear")?.value || "";
   const month = parts.find((part) => part.type === "month")?.value || "";
   const day = parts.find((part) => part.type === "day")?.value || "";
 
-  return `农历${year ? `${year}年` : ""}${month}${day}`;
+  return `${month}${day}`;
 }
 
 export default function SystemClock() {
@@ -27,6 +25,8 @@ export default function SystemClock() {
     () =>
       now.toLocaleTimeString("zh-CN", {
         hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
       }),
     [now]
   );
@@ -52,8 +52,8 @@ export default function SystemClock() {
   const lunarText = useMemo(() => formatLunarDate(now), [now]);
 
   return (
-    <div className="h-full rounded-2xl px-4 py-3 bg-transparent border border-white/40 shadow-lg text-gray-700 flex flex-col justify-center">
-      <div className="text-2xl font-semibold tracking-wide leading-tight" style={{ fontFamily: "var(--font-mono)" }}>
+    <div className="h-full rounded-2xl px-4 py-3 bg-transparent text-gray-700 flex flex-col justify-center">
+      <div className="text-3xl font-semibold tracking-wide leading-tight" style={{ fontFamily: "var(--font-mono)" }}>
         {timeText}
       </div>
       <div className="text-xs mt-2">{dateText}</div>
