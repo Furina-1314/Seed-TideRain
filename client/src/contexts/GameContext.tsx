@@ -38,6 +38,8 @@ export interface StickyNote {
   noteId: string;
   x: number;
   y: number;
+  width: number;
+  height: number;
   color: string;
 }
 
@@ -394,6 +396,7 @@ type GameAction =
   | { type: "DELETE_NOTE"; payload: string }
   | { type: "ADD_STICKY_NOTE"; payload: { noteId: string; x: number; y: number } }
   | { type: "MOVE_STICKY_NOTE"; payload: { id: string; x: number; y: number } }
+  | { type: "RESIZE_STICKY_NOTE"; payload: { id: string; width: number; height: number } }
   | { type: "CLOSE_STICKY_NOTE"; payload: string }
   | { type: "SET_STICKY_NOTE_COLOR"; payload: { id: string; color: string } }
   | { type: "ADD_HABIT"; payload: { name: string } }
@@ -787,6 +790,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             noteId: action.payload.noteId,
             x: action.payload.x,
             y: action.payload.y,
+            width: 224,
+            height: 192,
             color: "#ffffff",
           },
         ],
@@ -799,6 +804,16 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         stickyNotes: state.stickyNotes.map((sticky) =>
           sticky.id === action.payload.id
             ? { ...sticky, x: action.payload.x, y: action.payload.y }
+            : sticky
+        ),
+      };
+
+    case "RESIZE_STICKY_NOTE":
+      return {
+        ...state,
+        stickyNotes: state.stickyNotes.map((sticky) =>
+          sticky.id === action.payload.id
+            ? { ...sticky, width: action.payload.width, height: action.payload.height }
             : sticky
         ),
       };

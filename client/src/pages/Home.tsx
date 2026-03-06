@@ -6,6 +6,7 @@ import PlantInfo from "@/components/PlantInfo";
 import NotesPanel from "@/components/NotesPanel";
 import NotesTextPanel from "@/components/NotesTextPanel";
 import HabitsPanel from "@/components/HabitsPanel";
+import SystemClock from "@/components/SystemClock";
 
 import ProfilePage from "@/components/ProfilePage";
 import CalendarView from "@/components/CalendarView";
@@ -64,6 +65,7 @@ function StickyNotesOverlay({
   onUpdate,
   onClose,
   onColor,
+  onResize,
 }: {
   stickyNotes: StickyNoteEntry[];
   noteMap: Map<string, { id: string; content: string }>;
@@ -71,6 +73,7 @@ function StickyNotesOverlay({
   onUpdate: (id: string, content: string) => void;
   onClose: (id: string) => void;
   onColor: (id: string, color: string) => void;
+  onResize: (id: string, width: number, height: number) => void;
 }) {
   return (
     <>
@@ -81,8 +84,14 @@ function StickyNotesOverlay({
         return (
           <div
             key={sticky.id}
-            className="absolute z-30 w-56 rounded-xl border border-gray-200 shadow-lg backdrop-blur-sm"
-            style={{ left: sticky.x, top: sticky.y, backgroundColor: sticky.color || "#ffffff" }}
+            className="absolute z-30 rounded-xl border border-gray-200 shadow-lg backdrop-blur-sm"
+            style={{
+              left: sticky.x,
+              top: sticky.y,
+              width: sticky.width || 224,
+              height: sticky.height || 192,
+              backgroundColor: sticky.color || "#ffffff",
+            }}
           >
             <div
               className="flex items-center justify-between px-2 py-1 bg-yellow-200/80 rounded-t-xl cursor-move"
@@ -123,7 +132,33 @@ function StickyNotesOverlay({
             <textarea
               value={note.content}
               onChange={(e) => onUpdate(note.id, e.target.value)}
-              className="w-full h-32 resize-none bg-transparent p-2 text-xs text-gray-700 focus:outline-none"
+              className="w-full resize-none bg-transparent p-2 text-xs text-gray-700 focus:outline-none"
+              style={{ height: (sticky.height || 192) - 36 }}
+            />
+            <div
+              className="absolute right-0 bottom-0 w-4 h-4 cursor-se-resize bg-gray-400/60 hover:bg-gray-500/70 rounded-tl-md"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const originWidth = sticky.width || 224;
+                const originHeight = sticky.height || 192;
+
+                const handleMove = (moveEvent: MouseEvent) => {
+                  const nextWidth = Math.max(180, originWidth + moveEvent.clientX - startX);
+                  const nextHeight = Math.max(120, originHeight + moveEvent.clientY - startY);
+                  onResize(sticky.id, nextWidth, nextHeight);
+                };
+
+                const handleUp = () => {
+                  document.removeEventListener("mousemove", handleMove);
+                  document.removeEventListener("mouseup", handleUp);
+                };
+
+                document.addEventListener("mousemove", handleMove);
+                document.addEventListener("mouseup", handleUp);
+              }}
             />
           </div>
         );
@@ -213,16 +248,25 @@ export default function Home() {
       {/* 桌面端布局 */}
       <div className="relative z-10 h-full hidden lg:flex">
         {/* 左侧面板 - 移除 Logo，空间留给音效 */}
-        <div className={`shrink-0 h-full flex flex-col transition-all duration-300 ${leftCollapsed ? "w-0 opacity-0" : "w-[300px] opacity-100"}`}>
-          <div className="h-full p-4 flex flex-col gap-3 overflow-hidden">
-            {/* 番茄钟 - 高度 360px，确保数字在圆圈内 */}
+        <div className={`shrink-0 h-full flex flex-col transition-all duration-300 ${leftCollapsed ? "w-0 opacity-0" : "w-[340px] opacity-100"}`}>
+          <div className="h-full p-4 grid grid-cols-1 gap-3 overflow-hidden">
             <div className="shrink-0">
               <TimerPanel compact />
             </div>
-            {/* 音效面板 - 占据剩余空间 */}
-            <div className="flex-1 min-h-0">
+            <div className="min-h-0">
               <SoundPanel />
             </div>
+          </div>
+        </div>
+
+        {/* 时钟保持独立：左侧收起时也可见，并移动到页面左侧 */}
+        <div
+          className={`absolute top-4 z-20 transition-all duration-300 ${
+            leftCollapsed ? "left-4" : "left-[344px]"
+          }`}
+        >
+          <div className="w-[220px] h-[120px]">
+            <SystemClock />
           </div>
         </div>
 
@@ -291,6 +335,7 @@ export default function Home() {
             onUpdate={(id, content) => dispatch({ type: "UPDATE_NOTE", payload: { id, content } })}
             onClose={(id) => dispatch({ type: "CLOSE_STICKY_NOTE", payload: id })}
             onColor={(id, color) => dispatch({ type: "SET_STICKY_NOTE_COLOR", payload: { id, color } })}
+            onResize={(id, width, height) => dispatch({ type: "RESIZE_STICKY_NOTE", payload: { id, width, height } })}
           />
         </div>
 
@@ -376,6 +421,7 @@ export default function Home() {
             onUpdate={(id, content) => dispatch({ type: "UPDATE_NOTE", payload: { id, content } })}
             onClose={(id) => dispatch({ type: "CLOSE_STICKY_NOTE", payload: id })}
             onColor={(id, color) => dispatch({ type: "SET_STICKY_NOTE_COLOR", payload: { id, color } })}
+            onResize={(id, width, height) => dispatch({ type: "RESIZE_STICKY_NOTE", payload: { id, width, height } })}
           />
         </div>
 

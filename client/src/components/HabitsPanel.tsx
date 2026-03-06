@@ -77,12 +77,13 @@ export default function HabitsPanel() {
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
   const allCompleted = totalCount > 0 && completedCount === totalCount;
 
-  // 生成最近7天的日期
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
+  // 生成本周（周日到周六）的日期
+  const thisWeekDays = Array.from({ length: 7 }, (_, i) => {
     const date = new Date();
-    date.setDate(date.getDate() - (6 - i));
+    const dayOfWeek = date.getDay();
+    date.setDate(date.getDate() - dayOfWeek + i);
     return {
-      date: date,
+      date,
       dateStr: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
       label: date.toLocaleDateString("zh-CN", { weekday: "short" }),
       day: date.getDate(),
@@ -178,14 +179,14 @@ export default function HabitsPanel() {
       {showHistory && state.habits.length > 0 && (
         <div className="mb-3 bg-gray-50 rounded-xl p-3 overflow-x-auto overflow-y-auto max-h-50.5 shrink-0">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-600">近 7 天完成情况</span>
+            <span className="text-xs font-medium text-gray-600">本周完成情况</span>
             <button onClick={() => setShowHistory(false)} className="text-gray-400 hover:text-gray-600"><ChevronUp size={16} /></button>
           </div>
           <table className="w-full text-xs overflow-y-auto">
             <thead>
               <tr>
                 <th className="text-left py-1 text-gray-500 font-medium">习惯</th>
-                {last7Days.map((day, i) => (
+                {thisWeekDays.map((day, i) => (
                   <th key={i} className="text-center py-1 text-gray-400 w-8">
                     <div>{day.label}</div>
                     <div className="text-[9px]">{day.day}</div>
@@ -199,7 +200,7 @@ export default function HabitsPanel() {
               {state.habits.map((habit) => (
                 <tr key={habit.id} className="border-t border-gray-200">
                   <td className="py-1.5 pr-2 truncate max-w-[80px]" data-tooltip={habit.name}>{habit.name}</td>
-                  {last7Days.map((day, i) => (
+                  {thisWeekDays.map((day, i) => (
                     <td key={i} className="text-center py-1.5">
                       {isCompletedOnDate(habit, day.dateStr) ? (
                         <div className="w-5 h-5 mx-auto rounded-full bg-emerald-500 flex items-center justify-center">
