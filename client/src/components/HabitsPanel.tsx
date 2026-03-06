@@ -2,7 +2,7 @@ import { useGame } from "@/contexts/GameContext";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useDeleteConfirm } from "@/hooks/useDeleteConfirm";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Trash2, CheckCircle2, Circle, Target, Flame, Trophy, Calendar, ChevronDown, ChevronUp, X, Edit2, Check } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, Circle, Target, Flame, Trophy, Calendar, ChevronUp, X, Edit2, Check } from "lucide-react";
 
 function Celebration({ show, onComplete }: { show: boolean; onComplete: () => void }) {
   useEffect(() => {
@@ -67,7 +67,12 @@ export default function HabitsPanel() {
     confirmText: "确定删除这个习惯？",
   });
 
-  const completedCount = state.habits.filter((h) => h.completed).length;
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+  const isCompletedToday = (habit: typeof state.habits[0]) => habit.completedDates.includes(todayStr);
+
+  const completedCount = state.habits.filter((h) => isCompletedToday(h)).length;
   const totalCount = state.habits.length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
   const allCompleted = totalCount > 0 && completedCount === totalCount;
@@ -78,17 +83,14 @@ export default function HabitsPanel() {
     date.setDate(date.getDate() - (6 - i));
     return {
       date: date,
-      dateStr: date.toDateString(),
+      dateStr: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
       label: date.toLocaleDateString("zh-CN", { weekday: "short" }),
       day: date.getDate(),
     };
   });
 
   // 检查某天是否完成了习惯
-  const isCompletedOnDate = (habit: typeof state.habits[0], dateStr: string) => {
-    if (!habit.lastCompleted) return false;
-    return new Date(habit.lastCompleted).toDateString() === dateStr;
-  };
+  const isCompletedOnDate = (habit: typeof state.habits[0], dateStr: string) => habit.completedDates.includes(dateStr);
 
   const suggestedHabits = ["阅读", "喝水", "早睡", "运动", "冥想"];
   const unusedSuggestions = suggestedHabits.filter((s) => !state.habits.some((h) => h.name === s));
@@ -190,6 +192,7 @@ export default function HabitsPanel() {
                   </th>
                 ))}
                 <th className="text-center py-1 text-gray-500 font-medium w-10">🔥</th>
+                <th className="text-center py-1 text-gray-500 font-medium w-10">🏆</th>
               </tr>
             </thead>
             <tbody className="overflow-y-auto">
@@ -217,6 +220,12 @@ export default function HabitsPanel() {
                       <span className="text-gray-300">-</span>
                     )}
                   </td>
+                  <td className="text-center py-1.5">
+                    <span className="flex items-center justify-center gap-0.5 text-amber-600">
+                      <Trophy size={10} />
+                      {habit.accumulate}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -233,9 +242,9 @@ export default function HabitsPanel() {
           </div>
         ) : (
           state.habits.map((habit) => (
-            <div key={habit.id} className={`group flex items-center gap-3 p-3 rounded-xl transition-colors ${habit.completed ? "bg-emerald-50" : "bg-gray-50 hover:bg-gray-100"}`}>
-              <button onClick={() => handleToggle(habit.id, habit.completed)} className="shrink-0">
-                {habit.completed ? (
+            <div key={habit.id} className={`group flex items-center gap-3 p-3 rounded-xl transition-colors ${isCompletedToday(habit) ? "bg-emerald-50" : "bg-gray-50 hover:bg-gray-100"}`}>
+              <button onClick={() => handleToggle(habit.id, isCompletedToday(habit))} className="shrink-0">
+                {isCompletedToday(habit) ? (
                   <CheckCircle2 size={22} className="text-emerald-500" />
                 ) : (
                   <Circle size={22} className="text-gray-300 hover:text-gray-400 transition-colors" />
@@ -261,7 +270,7 @@ export default function HabitsPanel() {
                     <button onClick={() => { setEditingHabitId(null); setEditingHabitName(""); }} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"><X size={14} /></button>
                   </div>
                 ) : (
-                  <span className={`text-sm ${habit.completed ? "line-through text-gray-400" : "text-gray-700"}`}>{habit.name}</span>
+                  <span className={`text-sm ${isCompletedToday(habit) ? "line-through text-gray-400" : "text-gray-700"}`}>{habit.name}</span>
                 )}
               </div>
               {isConfirming(habit.id) ? (
@@ -280,12 +289,20 @@ export default function HabitsPanel() {
                   </button>
                 </div>
               )}
-              {habit.streak > 0 && (
-                <span className={`flex items-center gap-0.5 text-xs font-medium shrink-0 ${habit.streak >= 7 ? "text-orange-500" : "text-amber-500"}`}>
-                  <Flame size={14} className={habit.streak >= 7 ? "fill-orange-500" : "fill-amber-500"} />
-                  {habit.streak}
-                </span>
-              )}
+              <div className="flex items-center gap-2 shrink-0">
+                {habit.accumulate > 0 && (
+                  <span className="flex items-center gap-0.5 text-xs font-medium text-amber-600">
+                    <Trophy size={14} />
+                    {habit.accumulate}
+                  </span>
+                )}
+                {habit.streak > 0 && (
+                  <span className={`flex items-center gap-0.5 text-xs font-medium ${habit.streak >= 7 ? "text-orange-500" : "text-amber-500"}`}>
+                    <Flame size={14} className={habit.streak >= 7 ? "fill-orange-500" : "fill-amber-500"} />
+                    {habit.streak}
+                  </span>
+                )}
+              </div>
             </div>
           ))
         )}

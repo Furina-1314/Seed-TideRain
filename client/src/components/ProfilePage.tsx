@@ -424,7 +424,7 @@ export default function ProfilePage({ onClose }: ProfilePageProps) {
               {state.habits.length === 0 ? <p className="text-sm text-gray-400">还没有添加习惯</p> : state.habits.map((habit) => (
                 <div key={habit.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                   <span className="text-sm text-gray-700">{habit.name}</span>
-                  <div className="text-xs text-gray-500">连续 {habit.streak} 天</div>
+                  <div className="text-xs text-gray-500">连续 {habit.streak} 天 · 累计 {habit.accumulate} 天</div>
                 </div>
               ))}
             </div>
