@@ -27,19 +27,34 @@
     "directories": {
       "output": "release"
     },
+
     "files": [
       "dist/public/**/*",
       "electron/**/*",
       "package.json"
     ],
+
     "win": {
       "target": [
         {
           "target": "nsis",
           "arch": ["x64"]
         }
-      ]
+      ],
+      "icon": "icon/icon.ico"
     },
+
+    "mac": {
+      "target": "dmg",
+      "icon": "icon/icon.icns"
+    },
+
+    "linux": {
+      "target": "AppImage",
+      "icon": "icon/icon.png",
+      "category": "Utility"
+    },
+
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
