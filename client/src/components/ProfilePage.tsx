@@ -195,7 +195,7 @@ export default function ProfilePage({ onClose }: ProfilePageProps) {
   const roundedWeekData = weekData.map((d) => ({ ...d, minutes: Math.round(d.minutes) }));
   const maxMinutes = Math.max(...roundedWeekData.map((d) => d.minutes), 1);
   const todayMinutes = roundedWeekData[roundedWeekData.length - 1]?.minutes || 0;
-  const todaySessions = roundedWeekData[roundedWeekData.length - 1]?.sessions || 0;
+  const todaySessions = state.heatmapData.find((d) => d.date === todayStr)?.sessions || 0;
   const weekTotalMinutes = roundedWeekData.reduce((sum, d) => sum + d.minutes, 0);
   const avgMinutes = Math.round(weekTotalMinutes / 7);
   const todayDateStr = new Date().toDateString();
