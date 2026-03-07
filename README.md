@@ -33,7 +33,7 @@
 
 ## 快速安装
 
-可以在本项目 [Releases](https://github.com/Furina-1314/Companion-style-focus-tool-Copy/releases) 中找到适合的安装包。
+可以在本项目 [Releases](https://github.com/Furina-1314/Seed-TideRain/releases) 中找到适合的安装包。
 
 ## 开发文档
 
