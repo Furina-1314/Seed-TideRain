@@ -12,11 +12,33 @@ const PRIORITY_CONFIG = {
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 
+function formatDateTime(iso: string) {
+  return new Date(iso)
+    .toLocaleString("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
+    .replace(/\//g, "-");
+}
+
+function toDateTimeLocalValue(value?: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export default function NotesPanel() {
   const { state, dispatch } = useGame();
   const [newContent, setNewContent] = useState("");
   const [newTag, setNewTag] = useState<string>("");
   const [newPriority, setNewPriority] = useState<MemoEntry["priority"]>("medium");
+  const [newDueDate, setNewDueDate] = useState<string>("");
   const [isAdding, setIsAdding] = useState(false);
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,6 +46,7 @@ export default function NotesPanel() {
   const [editContent, setEditContent] = useState("");
   const [editTag, setEditTag] = useState<string>("");
   const [editPriority, setEditPriority] = useState<MemoEntry["priority"]>("medium");
+  const [editDueDate, setEditDueDate] = useState<string>("");
   const [newTagInput, setNewTagInput] = useState("");
   const [showNewTag, setShowNewTag] = useState(false);
   const newTagRef = useRef<HTMLDivElement>(null);
@@ -50,9 +73,18 @@ export default function NotesPanel() {
 
   const handleAdd = () => {
     if (!newContent.trim()) return;
-    dispatch({ type: "ADD_MEMO", payload: { content: newContent.trim(), tag: newTag, priority: newPriority } });
+    dispatch({
+      type: "ADD_MEMO",
+      payload: {
+        content: newContent.trim(),
+        tag: newTag,
+        priority: newPriority,
+        dueDate: newDueDate || undefined,
+      },
+    });
     setNewContent("");
     setNewTag("");
+    setNewDueDate("");
     setIsAdding(false);
   };
 
@@ -81,18 +113,20 @@ export default function NotesPanel() {
     setEditContent(memo.content);
     setEditTag(memo.tag);
     setEditPriority(memo.priority);
+    setEditDueDate(toDateTimeLocalValue(memo.dueDate));
   };
 
   const handleSaveEdit = () => {
     if (!editingId || !editContent.trim()) return;
     dispatch({ 
       type: "UPDATE_MEMO", 
-      payload: { id: editingId, content: editContent.trim(), tag: editTag, priority: editPriority } 
+      payload: { id: editingId, content: editContent.trim(), tag: editTag, priority: editPriority, dueDate: editDueDate || undefined } 
     });
     setEditingId(null);
     setEditContent("");
     setEditTag("");
     setEditPriority("medium");
+    setEditDueDate("");
   };
 
   const handleCancelEdit = () => {
@@ -100,6 +134,7 @@ export default function NotesPanel() {
     setEditContent("");
     setEditTag("");
     setEditPriority("medium");
+    setEditDueDate("");
   };
 
   // 过滤并排序：优先级红>黄>蓝，同优先级按时间早的在前
@@ -210,12 +245,19 @@ export default function NotesPanel() {
       {isAdding && (
         <div className="mb-3 bg-white rounded-xl p-3 shrink-0 border border-gray-200">
           <textarea value={newContent} onChange={(e) => setNewContent(e.target.value)} placeholder="添加待办..." rows={2} autoFocus className="w-full bg-gray-50 rounded-lg px-2 py-1.5 text-sm resize-none border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-300 mb-2" />
-          <div className="flex items-center gap-2 min-w-0">
-            <select value={newTag} onChange={(e) => setNewTag(e.target.value)} className="bg-white rounded-lg px-2 py-1.5 text-xs border border-gray-200 w-0 min-w-0 flex-shrink flex-grow max-w-[140px]">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
+            <select value={newTag} onChange={(e) => setNewTag(e.target.value)} className="bg-white rounded-lg px-2 py-1.5 text-xs border border-gray-200 min-w-[90px] flex-1">
               <option value="">无标签</option>
               {state.memoTags.filter(t => t !== "无标签").map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <input
+              type="datetime-local"
+              value={newDueDate}
+              onChange={(e) => setNewDueDate(e.target.value)}
+              className="bg-white rounded-lg px-2 py-1.5 text-xs border border-gray-200 min-w-[180px] flex-1"
+              title="设置截止时间"
+            />
+            <div className="flex items-center gap-2 w-full justify-between">
               <div className="flex gap-1">
                 {(["low", "medium", "high"] as const).map((p) => (
                   <button key={p} onClick={() => setNewPriority(p)} className={`w-7 h-7 rounded-lg text-xs flex items-center justify-center transition-all border ${newPriority === p ? `${PRIORITY_CONFIG[p].bg} ${PRIORITY_CONFIG[p].color} ${PRIORITY_CONFIG[p].border}` : "bg-white text-gray-400 border-gray-200"}`}>
@@ -254,12 +296,19 @@ export default function NotesPanel() {
                   {editingId === memo.id ? (
                     <div className="bg-white rounded-xl p-3 border border-gray-200">
                       <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={2} autoFocus className="w-full bg-gray-50 rounded-lg px-2 py-1.5 text-sm resize-none border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-300 mb-2" />
-                      <div className="flex items-center gap-2 min-w-0">
-                        <select value={editTag} onChange={(e) => setEditTag(e.target.value)} className="bg-white rounded-lg px-2 py-1.5 text-xs border border-gray-200 w-0 min-w-0 flex-shrink flex-grow max-w-[140px]">
+                      <div className="flex flex-wrap items-center gap-2 min-w-0">
+                        <select value={editTag} onChange={(e) => setEditTag(e.target.value)} className="bg-white rounded-lg px-2 py-1.5 text-xs border border-gray-200 min-w-[90px] flex-1">
                           <option value="">无标签</option>
                           {state.memoTags.filter(t => t !== "无标签").map((t) => <option key={t} value={t}>{t}</option>)}
                         </select>
-                        <div className="flex items-center gap-2 flex-shrink-0">
+                        <input
+                          type="datetime-local"
+                          value={editDueDate}
+                          onChange={(e) => setEditDueDate(e.target.value)}
+                          className="bg-white rounded-lg px-2 py-1.5 text-xs border border-gray-200 min-w-[180px] flex-1"
+                          title="设置截止时间"
+                        />
+                        <div className="flex items-center gap-2 w-full justify-between">
                           <div className="flex gap-1">
                             {(["low", "medium", "high"] as const).map((p) => (
                               <button key={p} onClick={() => setEditPriority(p)} className={`w-7 h-7 rounded-lg text-xs flex items-center justify-center transition-all border ${editPriority === p ? `${PRIORITY_CONFIG[p].bg} ${PRIORITY_CONFIG[p].color} ${PRIORITY_CONFIG[p].border}` : "bg-white text-gray-400 border-gray-200"}`}>
@@ -283,7 +332,12 @@ export default function NotesPanel() {
                             {PRIORITY_CONFIG[memo.priority].icon} {memo.tag}
                           </span>
                         )}
-                        <span className="text-[10px] text-gray-400">创建于 {new Date(memo.createdAt).toLocaleString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit"/*, hour: "2-digit", minute: "2-digit"*/ }).replace(/\//g, "-")}</span>
+                        {memo.dueDate && (
+                          <span className={`text-[10px] ${!memo.done && new Date(memo.dueDate).getTime() < Date.now() ? "text-red-500" : "text-amber-600"}`}>
+                            截止 {formatDateTime(memo.dueDate)}
+                          </span>
+                        )}
+                        <span className="text-[10px] text-gray-400">创建于 {formatDateTime(memo.createdAt)}</span>
                       </div>
                     </>
                   )}

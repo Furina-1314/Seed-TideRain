@@ -34,7 +34,7 @@ function formatLunarDate(date: Date) {
   return `${month}${toChineseDay(day)}`;
 }
 
-export default function SystemClock() {
+export default function SystemClock({ textClassName = "text-gray-700" }: { textClassName?: string }) {
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -73,7 +73,7 @@ export default function SystemClock() {
   const lunarText = useMemo(() => formatLunarDate(now), [now]);
 
   return (
-    <div className="h-full rounded-2xl px-4 py-3 bg-transparent text-gray-700 flex flex-col justify-center">
+    <div className={`h-full rounded-2xl px-4 py-3 bg-transparent flex flex-col justify-center ${textClassName}`}>
       <div className="text-3xl font-semibold tracking-wide leading-tight" style={{ fontFamily: "var(--font-mono)" }}>
         {timeText}
       </div>

@@ -3,6 +3,19 @@ import { useState, useEffect, useRef } from "react";
 import { useDeleteConfirm } from "@/hooks/useDeleteConfirm";
 import { BookText, Plus, Edit2, Trash2, Check, X, StickyNote } from "lucide-react";
 
+function formatDateTime(iso: string) {
+  return new Date(iso)
+    .toLocaleString("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })
+    .replace(/\//g, "-");
+}
+
 export default function NotesTextPanel() {
   const { state, dispatch } = useGame();
   const [isAdding, setIsAdding] = useState(false);
@@ -111,6 +124,9 @@ export default function NotesTextPanel() {
               ) : (
                 <>
                   <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{note.content}</p>
+                  <div className="mt-1.5">
+                    <span className="text-[10px] text-gray-400">创建于 {formatDateTime(note.createdAt)}</span>
+                  </div>
                   <div className="flex items-center justify-between mt-2 gap-2">
                     <span className="text-[10px] text-gray-400 flex items-center gap-1"><StickyNote size={11} />拖到主界面生成便利贴</span>
                     <div className="flex items-center gap-1 shrink-0">
