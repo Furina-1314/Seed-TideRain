@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useGame, type StickyNote as StickyNoteEntry } from "@/contexts/GameContext";
 import TimerPanel from "@/components/TimerPanel";
 import SoundPanel from "@/components/SoundPanel";
@@ -124,6 +124,13 @@ function StickyNotesOverlay({
                     title="设置便利贴颜色"
                   />
                 ))}
+                <input
+                  type="color"
+                  value={sticky.color || "#ffffff"}
+                  onChange={(e) => onColor(sticky.id, e.target.value)}
+                  className="w-4 h-4 p-0 border-0 bg-transparent cursor-pointer"
+                  title="自定义颜色"
+                />
               </div>
               <button onClick={() => onClose(sticky.id)} className="p-1 rounded hover:bg-gray-200/70 text-gray-700">
                 <X size={12} />
@@ -174,7 +181,32 @@ export default function Home() {
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [clockTextClassName, setClockTextClassName] = useState("text-gray-700");
   const { state, dispatch } = useGame();
+
+  useEffect(() => {
+    const imageUrl = state.customBackground || RANDOM_BG;
+    const img = new Image();
+    img.src = imageUrl;
+    img.onerror = () => setClockTextClassName("text-gray-700");
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 48;
+      canvas.height = 48;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      let total = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const alpha = data[i + 3] / 255;
+        const luminance = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        total += luminance * alpha;
+      }
+      const avgLuminance = total / (data.length / 4);
+      setClockTextClassName(avgLuminance < 140 ? "text-gray-100 drop-shadow-sm" : "text-gray-700");
+    };
+  }, [state.customBackground]);
 
   const rightTabs: { id: RightTab; label: string; icon: typeof FileText }[] = [
     { id: "todos", label: "待办", icon: FileText },
@@ -266,7 +298,7 @@ export default function Home() {
           }`}
         >
           <div className="w-[220px] h-[120px]">
-            <SystemClock />
+            <SystemClock textClassName={clockTextClassName} />
           </div>
         </div>
 

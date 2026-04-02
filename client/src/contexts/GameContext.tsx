@@ -22,6 +22,7 @@ export interface MemoEntry {
   tag: string;
   priority: "low" | "medium" | "high";
   done: boolean;
+  dueDate?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -385,8 +386,8 @@ type GameAction =
   | { type: "SET_SCENE"; payload: string | null }
   | { type: "SET_CUSTOM_MIX"; payload: Record<string, number> }
   | { type: "SET_MASTER_VOLUME"; payload: number }
-  | { type: "ADD_MEMO"; payload: { content: string; tag: string; priority: MemoEntry["priority"] } }
-  | { type: "UPDATE_MEMO"; payload: { id: string; content?: string; tag?: string; priority?: MemoEntry["priority"]; done?: boolean } }
+  | { type: "ADD_MEMO"; payload: { content: string; tag: string; priority: MemoEntry["priority"]; dueDate?: string } }
+  | { type: "UPDATE_MEMO"; payload: { id: string; content?: string; tag?: string; priority?: MemoEntry["priority"]; done?: boolean; dueDate?: string } }
   | { type: "DELETE_MEMO"; payload: string }
   | { type: "ADD_MEMO_TAG"; payload: string }
   | { type: "DELETE_MEMO_TAG"; payload: string }
@@ -669,6 +670,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             tag: action.payload.tag,
             priority: action.payload.priority,
             done: false,
+            dueDate: action.payload.dueDate,
             createdAt: now,
             updatedAt: now,
           },
@@ -688,6 +690,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 ...(action.payload.tag !== undefined && { tag: action.payload.tag }),
                 ...(action.payload.priority !== undefined && { priority: action.payload.priority }),
                 ...(action.payload.done !== undefined && { done: action.payload.done }),
+                ...(action.payload.dueDate !== undefined && { dueDate: action.payload.dueDate }),
                 updatedAt: new Date().toISOString(),
               }
             : m
