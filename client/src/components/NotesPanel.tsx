@@ -245,8 +245,8 @@ export default function NotesPanel() {
       {isAdding && (
         <div className="mb-3 bg-white rounded-xl p-3 shrink-0 border border-gray-200">
           <textarea value={newContent} onChange={(e) => setNewContent(e.target.value)} placeholder="添加待办..." rows={2} autoFocus className="w-full bg-gray-50 rounded-lg px-2 py-1.5 text-sm resize-none border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-300 mb-2" />
-          <div className="flex items-center gap-2 min-w-0">
-            <select value={newTag} onChange={(e) => setNewTag(e.target.value)} className="bg-white rounded-lg px-2 py-1.5 text-xs border border-gray-200 w-0 min-w-0 flex-shrink flex-grow max-w-[140px]">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
+            <select value={newTag} onChange={(e) => setNewTag(e.target.value)} className="bg-white rounded-lg px-2 py-1.5 text-xs border border-gray-200 min-w-[90px] flex-1">
               <option value="">无标签</option>
               {state.memoTags.filter(t => t !== "无标签").map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
@@ -254,10 +254,10 @@ export default function NotesPanel() {
               type="datetime-local"
               value={newDueDate}
               onChange={(e) => setNewDueDate(e.target.value)}
-              className="bg-white rounded-lg px-2 py-1.5 text-xs border border-gray-200"
+              className="bg-white rounded-lg px-2 py-1.5 text-xs border border-gray-200 min-w-[180px] flex-1"
               title="设置截止时间"
             />
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 w-full justify-between">
               <div className="flex gap-1">
                 {(["low", "medium", "high"] as const).map((p) => (
                   <button key={p} onClick={() => setNewPriority(p)} className={`w-7 h-7 rounded-lg text-xs flex items-center justify-center transition-all border ${newPriority === p ? `${PRIORITY_CONFIG[p].bg} ${PRIORITY_CONFIG[p].color} ${PRIORITY_CONFIG[p].border}` : "bg-white text-gray-400 border-gray-200"}`}>
@@ -296,8 +296,8 @@ export default function NotesPanel() {
                   {editingId === memo.id ? (
                     <div className="bg-white rounded-xl p-3 border border-gray-200">
                       <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={2} autoFocus className="w-full bg-gray-50 rounded-lg px-2 py-1.5 text-sm resize-none border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-300 mb-2" />
-                      <div className="flex items-center gap-2 min-w-0">
-                        <select value={editTag} onChange={(e) => setEditTag(e.target.value)} className="bg-white rounded-lg px-2 py-1.5 text-xs border border-gray-200 w-0 min-w-0 flex-shrink flex-grow max-w-[140px]">
+                      <div className="flex flex-wrap items-center gap-2 min-w-0">
+                        <select value={editTag} onChange={(e) => setEditTag(e.target.value)} className="bg-white rounded-lg px-2 py-1.5 text-xs border border-gray-200 min-w-[90px] flex-1">
                           <option value="">无标签</option>
                           {state.memoTags.filter(t => t !== "无标签").map((t) => <option key={t} value={t}>{t}</option>)}
                         </select>
@@ -305,10 +305,10 @@ export default function NotesPanel() {
                           type="datetime-local"
                           value={editDueDate}
                           onChange={(e) => setEditDueDate(e.target.value)}
-                          className="bg-white rounded-lg px-2 py-1.5 text-xs border border-gray-200"
+                          className="bg-white rounded-lg px-2 py-1.5 text-xs border border-gray-200 min-w-[180px] flex-1"
                           title="设置截止时间"
                         />
-                        <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex items-center gap-2 w-full justify-between">
                           <div className="flex gap-1">
                             {(["low", "medium", "high"] as const).map((p) => (
                               <button key={p} onClick={() => setEditPriority(p)} className={`w-7 h-7 rounded-lg text-xs flex items-center justify-center transition-all border ${editPriority === p ? `${PRIORITY_CONFIG[p].bg} ${PRIORITY_CONFIG[p].color} ${PRIORITY_CONFIG[p].border}` : "bg-white text-gray-400 border-gray-200"}`}>
