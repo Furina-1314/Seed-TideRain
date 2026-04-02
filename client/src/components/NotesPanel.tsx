@@ -326,18 +326,16 @@ export default function NotesPanel() {
                   ) : (
                     <>
                       <p className={`text-sm leading-relaxed ${memo.done ? "line-through text-gray-400" : "text-gray-700"}`}>{memo.content}</p>
-                      <div className="flex items-center gap-2 mt-1.5">
+                      <div className="mt-1.5 space-y-1">
                         {memo.tag && (
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 ${PRIORITY_CONFIG[memo.priority].bg} ${PRIORITY_CONFIG[memo.priority].color}`}>
+                          <span className={`inline-flex text-[10px] px-2 py-0.5 rounded-full font-medium items-center gap-1 ${PRIORITY_CONFIG[memo.priority].bg} ${PRIORITY_CONFIG[memo.priority].color}`}>
                             {PRIORITY_CONFIG[memo.priority].icon} {memo.tag}
                           </span>
                         )}
-                        {memo.dueDate && (
-                          <span className={`text-[10px] ${!memo.done && new Date(memo.dueDate).getTime() < Date.now() ? "text-red-500" : "text-amber-600"}`}>
-                            截止 {formatDateTime(memo.dueDate)}
-                          </span>
-                        )}
-                        <span className="text-[10px] text-gray-400">创建于 {formatDateTime(memo.createdAt)}</span>
+                        <div className="text-[10px] text-gray-400">创建于 {formatDateTime(memo.createdAt)}</div>
+                        <div className={`text-[10px] ${memo.dueDate && !memo.done && new Date(memo.dueDate).getTime() < Date.now() ? "text-red-500" : "text-amber-600"}`}>
+                          截止 {memo.dueDate ? formatDateTime(memo.dueDate) : "未设置"}
+                        </div>
                       </div>
                     </>
                   )}
