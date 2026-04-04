@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense, useMemo } from "react";
+import { useEffect, useState, lazy, Suspense, useMemo, useRef, useCallback } from "react";
 import { useGame, type StickyNote as StickyNoteEntry } from "@/contexts/GameContext";
 import TimerPanel from "@/components/TimerPanel";
 import SoundPanel from "@/components/SoundPanel";
@@ -188,6 +188,7 @@ export default function Home() {
   const [showPlantDialog, setShowPlantDialog] = useState(false);
   const [quotePools, setQuotePools] = useState<Record<string, PlantDialogQuote[]>>({});
   const [maxIdByType, setMaxIdByType] = useState<Record<string, number>>({});
+  const hasShownStartupDialogRef = useRef(false);
   const { state, dispatch } = useGame();
 
   const currentPlantDialogType = useMemo(
@@ -253,15 +254,12 @@ export default function Home() {
     };
   }, []);
 
-  const handlePlantClick = () => {
-    const poolType = currentPlantDialogType;
+  const getDialogTextByType = useCallback((poolType: string) => {
     const pool = quotePools[poolType];
     const maxId = maxIdByType[poolType] ?? 0;
 
     if (!pool || maxId <= 0) {
-      setPlantDialogText(`当前还没有 type="${poolType}" 的语句库。`);
-      setShowPlantDialog(true);
-      return;
+      return `当前还没有 type="${poolType}" 的语句库。`;
     }
 
     // 规则：先拿到该语句库 id 最大值，再随机生成 [1, maxId] 的整数，按 id 精确匹配
@@ -275,9 +273,24 @@ export default function Home() {
     }
     if (!selected) selected = pool[0];
 
-    setPlantDialogText(`"${selected.hitokoto}"\n-${selected.from ?? "未知来源"}`);
+    return `"${selected.hitokoto}"\n-${selected.from ?? "未知来源"}`;
+  }, [maxIdByType, quotePools]);
+
+  const handlePlantClick = () => {
+    const poolType = currentPlantDialogType;
+    const dialogText = getDialogTextByType(poolType);
+    setPlantDialogText(dialogText);
     setShowPlantDialog(true);
   };
+
+  useEffect(() => {
+    // 每次应用首次启动后自动弹出一次 type="a" 语句
+    if (hasShownStartupDialogRef.current) return;
+    if (!quotePools.a || (maxIdByType.a ?? 0) <= 0) return;
+    hasShownStartupDialogRef.current = true;
+    setPlantDialogText(getDialogTextByType("a"));
+    setShowPlantDialog(true);
+  }, [getDialogTextByType, maxIdByType.a, quotePools.a]);
 
   const rightTabs: { id: RightTab; label: string; icon: typeof FileText }[] = [
     { id: "todos", label: "待办", icon: FileText },

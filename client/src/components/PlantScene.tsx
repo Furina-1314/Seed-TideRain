@@ -945,6 +945,15 @@ export default function PlantScene({ previewStage, onPlantClick }: PlantScenePro
       creator(plantGroup);
     }
 
+    // 增加一个不可见点击区域，避免模型细节过小时点击难命中
+    const clickArea = new THREE.Mesh(
+      new THREE.SphereGeometry(0.8, 18, 18),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+    );
+    clickArea.position.set(0, 1.1, 0);
+    clickArea.name = "plant-click-area";
+    plantGroup.add(clickArea);
+
     plantGroup.scale.set(0.7, 0.7, 0.7);
     let scale = 0.7;
     const growIn = () => {
