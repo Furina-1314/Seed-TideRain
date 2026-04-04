@@ -195,7 +195,7 @@ export default function Home() {
 
   const currentPlantDialogType = useMemo(
     // 明确判断：番茄钟未工作 => type "a"；番茄钟工作中 => type "b"
-    () => (state.isTimerRunning ? "b" : "a"),
+    () => (state.isTimerRunning ? "i" : "a"),
     [state.isTimerRunning]
   );
 
@@ -275,7 +275,7 @@ export default function Home() {
     }
     if (!selected) selected = pool[0];
 
-    return { quote: `"${selected.hitokoto}"`, from: `-${selected.from ?? "未知来源"}` };
+    return { quote: `"${selected.hitokoto}"`, from: `———${selected.from ?? "未知来源"}` };
   }, [maxIdByType, quotePools]);
 
   const handlePlantClick = () => {
