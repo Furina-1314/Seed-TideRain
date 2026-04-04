@@ -713,9 +713,10 @@ const STAGE_CREATORS: Record<string, (group: THREE.Group) => void> = {
 
 interface PlantSceneProps {
   previewStage?: string | null;
+  onPlantClick?: () => void;
 }
 
-export default function PlantScene({ previewStage }: PlantSceneProps = {}) {
+export default function PlantScene({ previewStage, onPlantClick }: PlantSceneProps = {}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<{
     scene: THREE.Scene;
@@ -730,6 +731,13 @@ export default function PlantScene({ previewStage }: PlantSceneProps = {}) {
   } | null>(null);
   const { currentPlantStage } = useGame();
   const [isLoading, setIsLoading] = useState(true);
+  const onPlantClickRef = useRef(onPlantClick);
+  const clickRaycasterRef = useRef(new THREE.Raycaster());
+  const clickPointerRef = useRef(new THREE.Vector2());
+
+  useEffect(() => {
+    onPlantClickRef.current = onPlantClick;
+  }, [onPlantClick]);
 
   // 如果有预览阶段则使用，否则使用当前阶段
   const stageImage = useMemo(() => {
@@ -762,6 +770,7 @@ export default function PlantScene({ previewStage }: PlantSceneProps = {}) {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.3;
     container.appendChild(renderer.domElement);
+    renderer.domElement.style.cursor = "pointer";
 
     const ambientLight = new THREE.AmbientLight(0xfff8e1, 0.7);
     scene.add(ambientLight);
@@ -889,9 +898,25 @@ export default function PlantScene({ previewStage }: PlantSceneProps = {}) {
     };
     window.addEventListener("resize", onResize);
 
+    const onCanvasClick = (event: MouseEvent) => {
+      if (!sceneRef.current) return;
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      clickPointerRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      clickPointerRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      clickRaycasterRef.current.setFromCamera(clickPointerRef.current, camera);
+      const intersects = clickRaycasterRef.current.intersectObjects(plantGroup.children, true);
+      if (intersects.length > 0) {
+        onPlantClickRef.current?.();
+      }
+    };
+    renderer.domElement.addEventListener("click", onCanvasClick);
+
     return () => {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("mousemove", onMouseMove);
+      renderer.domElement.removeEventListener("click", onCanvasClick);
       cancelAnimationFrame(animId);
       renderer.dispose();
       if (container.contains(renderer.domElement)) {
@@ -919,6 +944,15 @@ export default function PlantScene({ previewStage }: PlantSceneProps = {}) {
     if (creator) {
       creator(plantGroup);
     }
+
+    // 增加一个不可见点击区域，避免模型细节过小时点击难命中
+    const clickArea = new THREE.Mesh(
+      new THREE.SphereGeometry(0.8, 18, 18),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+    );
+    clickArea.position.set(0, 1.1, 0);
+    clickArea.name = "plant-click-area";
+    plantGroup.add(clickArea);
 
     plantGroup.scale.set(0.7, 0.7, 0.7);
     let scale = 0.7;
