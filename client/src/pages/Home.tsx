@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState, lazy, Suspense, useMemo } from "react";
 import { useGame, type StickyNote as StickyNoteEntry } from "@/contexts/GameContext";
 import TimerPanel from "@/components/TimerPanel";
 import SoundPanel from "@/components/SoundPanel";
@@ -10,7 +10,6 @@ import SystemClock from "@/components/SystemClock";
 
 import ProfilePage from "@/components/ProfilePage";
 import CalendarView from "@/components/CalendarView";
-import DialogBubble from "@/components/DialogBubble";
 import FloatingParticles from "@/components/FloatingParticles";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -40,6 +39,9 @@ const IS_CLOUDS = RANDOM_BG === CLOUDS_BG;
 
 type RightTab = "todos" | "notes" | "habits";
 type MobilePanel = "timer" | "sounds" | "plant" | "todos" | "notes" | "habits" | null;
+type PlantDialogQuote = { id: number; type: string; hitokoto: string; from: string | null };
+
+const quoteModules = import.meta.glob("/src/components/DailyQuotes/*.json");
 
 // 自定义背景组件
 function CustomBackground() {
@@ -182,7 +184,17 @@ export default function Home() {
   const [showProfile, setShowProfile] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [clockTextClassName, setClockTextClassName] = useState("text-gray-700");
+  const [plantDialogText, setPlantDialogText] = useState("");
+  const [showPlantDialog, setShowPlantDialog] = useState(false);
+  const [quotePools, setQuotePools] = useState<Record<string, PlantDialogQuote[]>>({});
+  const [maxIdByType, setMaxIdByType] = useState<Record<string, number>>({});
   const { state, dispatch } = useGame();
+
+  const currentPlantDialogType = useMemo(
+    // 明确判断：番茄钟未工作 => type "a"；番茄钟工作中 => type "b"
+    () => (state.isTimerRunning ? "b" : "a"),
+    [state.isTimerRunning]
+  );
 
   useEffect(() => {
     const imageUrl = state.customBackground || RANDOM_BG;
@@ -207,6 +219,65 @@ export default function Home() {
       setClockTextClassName(avgLuminance < 140 ? "text-gray-100 drop-shadow-sm" : "text-gray-700");
     };
   }, [state.customBackground]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadAllQuotePools = async () => {
+      const pools: Record<string, PlantDialogQuote[]> = {};
+      const maxMap: Record<string, number> = {};
+
+      const entries = Object.entries(quoteModules);
+      for (const [, loadModule] of entries) {
+        const loaded = await loadModule();
+        const quotes = ((loaded as { default?: unknown }).default ?? []) as PlantDialogQuote[];
+        if (!Array.isArray(quotes) || quotes.length === 0) continue;
+
+        const poolType = quotes[0]?.type;
+        if (!poolType) continue;
+        pools[poolType] = quotes;
+
+        const maxId = quotes.reduce((maxIdValue, item) => Math.max(maxIdValue, item.id ?? 0), 0);
+        maxMap[poolType] = maxId;
+      }
+
+      if (!mounted) return;
+      setQuotePools(pools);
+      setMaxIdByType(maxMap);
+    };
+
+    void loadAllQuotePools();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handlePlantClick = () => {
+    const poolType = currentPlantDialogType;
+    const pool = quotePools[poolType];
+    const maxId = maxIdByType[poolType] ?? 0;
+
+    if (!pool || maxId <= 0) {
+      setPlantDialogText(`当前还没有 type="${poolType}" 的语句库。`);
+      setShowPlantDialog(true);
+      return;
+    }
+
+    // 规则：先拿到该语句库 id 最大值，再随机生成 [1, maxId] 的整数，按 id 精确匹配
+    let randomId = Math.floor(Math.random() * maxId) + 1;
+    let selected = pool.find((item) => item.id === randomId);
+
+    // 处理 id 不连续场景：最多重试 12 次，仍失败则回退到第 1 条
+    for (let attempt = 0; !selected && attempt < 12; attempt++) {
+      randomId = Math.floor(Math.random() * maxId) + 1;
+      selected = pool.find((item) => item.id === randomId);
+    }
+    if (!selected) selected = pool[0];
+
+    setPlantDialogText(`"${selected.hitokoto}"\n-${selected.from ?? "未知来源"}`);
+    setShowPlantDialog(true);
+  };
 
   const rightTabs: { id: RightTab; label: string; icon: typeof FileText }[] = [
     { id: "todos", label: "待办", icon: FileText },
@@ -356,9 +427,25 @@ export default function Home() {
         >
           <div className="w-full h-full max-w-2xl relative">
             <Suspense fallback={<div className="w-full h-full flex items-center justify-center"><Leaf size={40} className="text-emerald-400 animate-pulse" /></div>}>
-              <PlantScene />
+              <PlantScene onPlantClick={handlePlantClick} />
             </Suspense>
-            <DialogBubble />
+            {showPlantDialog && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <div className="glass-strong rounded-2xl px-5 py-4 relative shadow-xl">
+                  <div className="absolute -top-2 left-4 w-5 h-5 rounded-full bg-gradient-to-br from-amber-300 to-orange-400 flex items-center justify-center text-[10px]">
+                    ✨
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shrink-0 shadow-md">
+                      <Leaf size={18} className="text-white" />
+                    </div>
+                    <div className="flex-1 pt-1">
+                      <p className="text-sm font-medium leading-relaxed whitespace-pre-line">{plantDialogText}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <StickyNotesOverlay
             stickyNotes={state.stickyNotes}
@@ -442,10 +529,26 @@ export default function Home() {
         >
           <div className="w-full h-full">
             <Suspense fallback={<div className="w-full h-full flex items-center justify-center"><Leaf size={32} className="text-emerald-400 animate-pulse" /></div>}>
-              <PlantScene />
+              <PlantScene onPlantClick={handlePlantClick} />
             </Suspense>
           </div>
-          <DialogBubble />
+          {showPlantDialog && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <div className="glass-strong rounded-2xl px-5 py-4 relative shadow-xl">
+                <div className="absolute -top-2 left-4 w-5 h-5 rounded-full bg-gradient-to-br from-amber-300 to-orange-400 flex items-center justify-center text-[10px]">
+                  ✨
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shrink-0 shadow-md">
+                    <Leaf size={18} className="text-white" />
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <p className="text-sm font-medium leading-relaxed whitespace-pre-line">{plantDialogText}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           <StickyNotesOverlay
             stickyNotes={state.stickyNotes}
             noteMap={noteMap}
