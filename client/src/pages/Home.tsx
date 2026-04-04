@@ -40,6 +40,7 @@ const IS_CLOUDS = RANDOM_BG === CLOUDS_BG;
 type RightTab = "todos" | "notes" | "habits";
 type MobilePanel = "timer" | "sounds" | "plant" | "todos" | "notes" | "habits" | null;
 type PlantDialogQuote = { id: number; type: string; hitokoto: string; from: string | null };
+type PlantDialogData = { quote: string; from: string };
 
 const quoteModules = import.meta.glob("/src/components/DailyQuotes/*.json");
 
@@ -184,8 +185,9 @@ export default function Home() {
   const [showProfile, setShowProfile] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [clockTextClassName, setClockTextClassName] = useState("text-gray-700");
-  const [plantDialogText, setPlantDialogText] = useState("");
+  const [plantDialog, setPlantDialog] = useState<PlantDialogData | null>(null);
   const [showPlantDialog, setShowPlantDialog] = useState(false);
+  const [isPlantDialogFading, setIsPlantDialogFading] = useState(false);
   const [quotePools, setQuotePools] = useState<Record<string, PlantDialogQuote[]>>({});
   const [maxIdByType, setMaxIdByType] = useState<Record<string, number>>({});
   const hasShownStartupDialogRef = useRef(false);
@@ -254,12 +256,12 @@ export default function Home() {
     };
   }, []);
 
-  const getDialogTextByType = useCallback((poolType: string) => {
+  const getDialogTextByType = useCallback((poolType: string): PlantDialogData => {
     const pool = quotePools[poolType];
     const maxId = maxIdByType[poolType] ?? 0;
 
     if (!pool || maxId <= 0) {
-      return `当前还没有 type="${poolType}" 的语句库。`;
+      return { quote: `当前还没有 type="${poolType}" 的语句库。`, from: "" };
     }
 
     // 规则：先拿到该语句库 id 最大值，再随机生成 [1, maxId] 的整数，按 id 精确匹配
@@ -273,13 +275,14 @@ export default function Home() {
     }
     if (!selected) selected = pool[0];
 
-    return `"${selected.hitokoto}"\n-${selected.from ?? "未知来源"}`;
+    return { quote: `"${selected.hitokoto}"`, from: `-${selected.from ?? "未知来源"}` };
   }, [maxIdByType, quotePools]);
 
   const handlePlantClick = () => {
     const poolType = currentPlantDialogType;
     const dialogText = getDialogTextByType(poolType);
-    setPlantDialogText(dialogText);
+    setPlantDialog(dialogText);
+    setIsPlantDialogFading(false);
     setShowPlantDialog(true);
   };
 
@@ -288,9 +291,20 @@ export default function Home() {
     if (hasShownStartupDialogRef.current) return;
     if (!quotePools.a || (maxIdByType.a ?? 0) <= 0) return;
     hasShownStartupDialogRef.current = true;
-    setPlantDialogText(getDialogTextByType("a"));
+    setPlantDialog(getDialogTextByType("a"));
+    setIsPlantDialogFading(false);
     setShowPlantDialog(true);
   }, [getDialogTextByType, maxIdByType.a, quotePools.a]);
+
+  useEffect(() => {
+    if (!showPlantDialog) return;
+    const fadeTimer = setTimeout(() => setIsPlantDialogFading(true), 5200);
+    const hideTimer = setTimeout(() => setShowPlantDialog(false), 5600);
+    return () => {
+      clearTimeout(fadeTimer);
+      clearTimeout(hideTimer);
+    };
+  }, [showPlantDialog, plantDialog]);
 
   const rightTabs: { id: RightTab; label: string; icon: typeof FileText }[] = [
     { id: "todos", label: "待办", icon: FileText },
@@ -442,8 +456,8 @@ export default function Home() {
             <Suspense fallback={<div className="w-full h-full flex items-center justify-center"><Leaf size={40} className="text-emerald-400 animate-pulse" /></div>}>
               <PlantScene onPlantClick={handlePlantClick} />
             </Suspense>
-            {showPlantDialog && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-300">
+            {showPlantDialog && plantDialog && (
+              <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-300 transition-opacity ${isPlantDialogFading ? "opacity-0" : "opacity-100"}`}>
                 <div className="glass-strong rounded-2xl px-5 py-4 relative shadow-xl">
                   <div className="absolute -top-2 left-4 w-5 h-5 rounded-full bg-gradient-to-br from-amber-300 to-orange-400 flex items-center justify-center text-[10px]">
                     ✨
@@ -453,7 +467,10 @@ export default function Home() {
                       <Leaf size={18} className="text-white" />
                     </div>
                     <div className="flex-1 pt-1">
-                      <p className="text-sm font-medium leading-relaxed whitespace-pre-line">{plantDialogText}</p>
+                      <p className="text-sm font-medium leading-relaxed">{plantDialog.quote}</p>
+                      {plantDialog.from && (
+                        <p className="text-xs text-muted-foreground mt-2 text-right">{plantDialog.from}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -545,8 +562,8 @@ export default function Home() {
               <PlantScene onPlantClick={handlePlantClick} />
             </Suspense>
           </div>
-          {showPlantDialog && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-300">
+          {showPlantDialog && plantDialog && (
+            <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-300 transition-opacity ${isPlantDialogFading ? "opacity-0" : "opacity-100"}`}>
               <div className="glass-strong rounded-2xl px-5 py-4 relative shadow-xl">
                 <div className="absolute -top-2 left-4 w-5 h-5 rounded-full bg-gradient-to-br from-amber-300 to-orange-400 flex items-center justify-center text-[10px]">
                   ✨
@@ -556,7 +573,10 @@ export default function Home() {
                     <Leaf size={18} className="text-white" />
                   </div>
                   <div className="flex-1 pt-1">
-                    <p className="text-sm font-medium leading-relaxed whitespace-pre-line">{plantDialogText}</p>
+                    <p className="text-sm font-medium leading-relaxed">{plantDialog.quote}</p>
+                    {plantDialog.from && (
+                      <p className="text-xs text-muted-foreground mt-2 text-right">{plantDialog.from}</p>
+                    )}
                   </div>
                 </div>
               </div>
