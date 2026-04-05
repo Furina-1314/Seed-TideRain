@@ -377,13 +377,13 @@ export default function Home() {
 
       {/* 桌面端布局 */}
       <div className="relative z-10 h-full hidden lg:flex">
-        {/* 左侧面板 - 移除 Logo，空间留给音效 */}
+        {/* 左侧面板 */}
         <div className={`shrink-0 h-full flex flex-col transition-all duration-300 ${leftCollapsed ? "w-0 opacity-0" : "w-[340px] opacity-100"}`}>
-          <div className="h-full p-4 grid grid-cols-1 gap-3 overflow-hidden">
+          <div className="h-full p-4 flex flex-col gap-3 overflow-hidden">
             <div className="shrink-0">
               <TimerPanel compact />
             </div>
-            <div className="min-h-0">
+            <div className="flex-1 min-h-0">
               <SoundPanel />
             </div>
           </div>
