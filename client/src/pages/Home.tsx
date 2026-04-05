@@ -30,8 +30,9 @@ import {
 
 const PlantScene = lazy(() => import("@/components/PlantScene"));
 
-const CLOUDS_BG = "/assets/clouds-bg.png";
-const HERO_BG = "/assets/hero-bg.png";
+const ASSET_BASE = import.meta.env.BASE_URL;
+const CLOUDS_BG = `${ASSET_BASE}assets/clouds-bg.png`;
+const HERO_BG = `${ASSET_BASE}assets/hero-bg.png`;
 
 // 随机选择背景图（50%概率）
 const RANDOM_BG = Math.random() < 0.5 ? CLOUDS_BG : HERO_BG;
