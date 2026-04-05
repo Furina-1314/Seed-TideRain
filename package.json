@@ -25,7 +25,8 @@
     "appId": "com.furina.seedcompanion",
     "productName": "Seed: TideRain",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "icon"
     },
 
     "files": [
@@ -41,17 +42,17 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "icon/icon.ico"
+      "icon": "icon.ico"
     },
 
     "mac": {
       "target": "dmg",
-      "icon": "icon/icon.icns"
+      "icon": "icon.icns"
     },
 
     "linux": {
       "target": "AppImage",
-      "icon": "icon/icon.png",
+      "icon": "icon.png",
       "category": "Utility"
     },
 
