@@ -42,6 +42,12 @@ type RightTab = "todos" | "notes" | "habits";
 type MobilePanel = "timer" | "sounds" | "plant" | "todos" | "notes" | "habits" | null;
 type PlantDialogQuote = { id: number; type: string; hitokoto: string; from: string | null };
 type PlantDialogData = { quote: string; from: string };
+type GuideStep = {
+  title: string;
+  description: string;
+  targetClassName: string;
+  setup?: () => void;
+};
 
 const quoteModules = import.meta.glob("/src/components/DailyQuotes/*.json");
 
@@ -191,6 +197,8 @@ export default function Home() {
   const [isPlantDialogFading, setIsPlantDialogFading] = useState(false);
   const [quotePools, setQuotePools] = useState<Record<string, PlantDialogQuote[]>>({});
   const [maxIdByType, setMaxIdByType] = useState<Record<string, number>>({});
+  const [showGuide, setShowGuide] = useState(false);
+  const [guideStepIndex, setGuideStepIndex] = useState(0);
   const hasShownStartupDialogRef = useRef(false);
   const { state, dispatch } = useGame();
 
@@ -324,6 +332,86 @@ export default function Home() {
   ];
 
   const noteMap = new Map(state.notes.map((n) => [n.id, n]));
+
+  const startGuide = useCallback(() => {
+    setLeftCollapsed(false);
+    setRightCollapsed(false);
+    setMobilePanel(null);
+    setShowCalendar(false);
+    setShowProfile(false);
+    setRightTab("todos");
+    setGuideStepIndex(0);
+    setShowGuide(true);
+  }, []);
+
+  const finishGuide = useCallback(() => {
+    setShowGuide(false);
+    localStorage.setItem("seed-tiderain-guide-completed", "true");
+  }, []);
+
+  const guideSteps: GuideStep[] = useMemo(
+    () => [
+      {
+        title: "日历与个人中心",
+        description: "这里是中间顶部按钮，可快速打开日历和个人中心，查看计划与个人数据。",
+        targetClassName: "top-16 left-1/2 -translate-x-1/2",
+      },
+      {
+        title: "专注计时",
+        description: "左上方为专注计时区，用于启动番茄钟、查看当前专注阶段与剩余时间。",
+        targetClassName: "top-8 left-6 max-w-xs",
+      },
+      {
+        title: "环境音乐",
+        description: "左下方为环境音乐区，可以播放/暂停并切换环境音，营造专注氛围。",
+        targetClassName: "bottom-28 left-6 max-w-xs",
+      },
+      {
+        title: "数据统计",
+        description: "右上方区域展示植物成长和统计信息，帮助你了解专注进展。",
+        targetClassName: "top-8 right-6 max-w-xs",
+      },
+      {
+        title: "代办处理",
+        description: "右侧标签可切换到“待办”，用于创建、勾选与整理当天任务。",
+        targetClassName: "top-52 right-6 max-w-xs",
+        setup: () => setRightTab("todos"),
+      },
+      {
+        title: "习惯记录",
+        description: "右侧标签切换到“习惯”后，可记录打卡并追踪连续完成天数。",
+        targetClassName: "top-52 right-6 max-w-xs",
+        setup: () => setRightTab("habits"),
+      },
+      {
+        title: "笔记",
+        description: "右侧标签切换到“笔记”后，可编辑笔记并拖拽到主界面生成便利贴。",
+        targetClassName: "top-52 right-6 max-w-xs",
+        setup: () => setRightTab("notes"),
+      },
+    ],
+    []
+  );
+
+  useEffect(() => {
+    const hasCompletedGuide = localStorage.getItem("seed-tiderain-guide-completed") === "true";
+    if (!hasCompletedGuide) {
+      startGuide();
+    }
+  }, [startGuide]);
+
+  useEffect(() => {
+    if (!showGuide) return;
+    guideSteps[guideStepIndex]?.setup?.();
+  }, [guideStepIndex, guideSteps, showGuide]);
+
+  const handleGuideNext = () => {
+    if (guideStepIndex >= guideSteps.length - 1) {
+      finishGuide();
+      return;
+    }
+    setGuideStepIndex((prev) => prev + 1);
+  };
 
   const renderRightContent = () => {
     switch (rightTab) {
@@ -633,8 +721,37 @@ export default function Home() {
       </div>
 
       {/* 弹窗 */}
-      {showProfile && <ProfilePage onClose={() => setShowProfile(false)} />}
+      {showProfile && <ProfilePage onClose={() => setShowProfile(false)} onStartGuide={startGuide} />}
       {showCalendar && <CalendarView onClose={() => setShowCalendar(false)} />}
+
+      {showGuide && (
+        <>
+          <div className="fixed inset-0 z-[70] bg-black/45 backdrop-blur-[1px]" />
+          <div className={`fixed z-[80] ${guideSteps[guideStepIndex]?.targetClassName}`}>
+            <div className="w-[320px] max-w-[calc(100vw-2rem)] rounded-2xl border border-white/20 bg-white/95 shadow-2xl p-4">
+              <div className="text-[11px] text-emerald-600 font-semibold mb-1">
+                新手引导 {guideStepIndex + 1}/{guideSteps.length}
+              </div>
+              <h3 className="text-base font-bold text-gray-900 mb-2">{guideSteps[guideStepIndex]?.title}</h3>
+              <p className="text-sm text-gray-600 leading-relaxed mb-4">{guideSteps[guideStepIndex]?.description}</p>
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={finishGuide}
+                  className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  跳过引导
+                </button>
+                <button
+                  onClick={handleGuideNext}
+                  className="px-4 py-2 rounded-xl bg-emerald-500 text-white text-xs font-semibold hover:bg-emerald-600 transition-colors"
+                >
+                  {guideStepIndex >= guideSteps.length - 1 ? "完成" : "下一步"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -1,12 +1,13 @@
 import { useGame } from "@/contexts/GameContext";
 import { useRef, useMemo } from "react";
-import { X, Download, Upload, Trophy, Calendar, Clock, Target, Flame, Award, TrendingUp, ImagePlus, RotateCcw, Lock, Unlock, BarChart3, Zap, CheckSquare, Trash2 } from "lucide-react";
+import { X, Download, Upload, Trophy, Calendar, Clock, Target, Flame, Award, TrendingUp, ImagePlus, RotateCcw, Lock, Unlock, BarChart3, Zap, CheckSquare, Trash2, Sparkles } from "lucide-react";
 
 interface ProfilePageProps {
   onClose: () => void;
+  onStartGuide?: () => void;
 }
 
-export default function ProfilePage({ onClose }: ProfilePageProps) {
+export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps) {
   const { state, dispatch } = useGame();
   const bgInputRef = useRef<HTMLInputElement>(null);
 
@@ -242,9 +243,18 @@ export default function ProfilePage({ onClose }: ProfilePageProps) {
               <p className="text-sm text-gray-500">你的专注之旅</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-            <X size={24} className="text-gray-500" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onStartGuide}
+              className="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors text-xs font-medium flex items-center gap-1"
+            >
+              <Sparkles size={14} />
+              新手引导
+            </button>
+            <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <X size={24} className="text-gray-500" />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
