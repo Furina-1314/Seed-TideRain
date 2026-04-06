@@ -3,6 +3,8 @@ import { useGame, type MemoEntry } from "@/contexts/GameContext";
 import { useState, useEffect, useRef } from "react";
 import { useDeleteConfirm } from "@/hooks/useDeleteConfirm";
 import { Plus, Trash2, Lightbulb, Check, Edit2, Search, X, Tag } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { GEMINI_MODELS, generateTodosByGemini } from "@/lib/todoAi";
 
 const PRIORITY_CONFIG = {
   low: { label: "低", color: "text-blue-600", bg: "bg-blue-100", border: "border-blue-300", icon: "🔵" },
@@ -49,6 +51,10 @@ export default function NotesPanel() {
   const [editDueDate, setEditDueDate] = useState<string>("");
   const [newTagInput, setNewTagInput] = useState("");
   const [showNewTag, setShowNewTag] = useState(false);
+  const [showAiImportDialog, setShowAiImportDialog] = useState(false);
+  const [aiRawText, setAiRawText] = useState("");
+  const [aiModel, setAiModel] = useState(state.geminiModel || "gemini-1.5-flash");
+  const [aiImporting, setAiImporting] = useState(false);
   const newTagRef = useRef<HTMLDivElement>(null);
 
   // 新建时，根据当前筛选自动设置默认标签
@@ -70,6 +76,10 @@ export default function NotesPanel() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showNewTag]);
+
+  useEffect(() => {
+    setAiModel(state.geminiModel || "gemini-1.5-flash");
+  }, [state.geminiModel]);
 
   const handleAdd = () => {
     if (!newContent.trim()) return;
@@ -105,6 +115,48 @@ export default function NotesPanel() {
     // 如果删除的是当前选中标签，清空选择
     if (newTag === tagToDelete) {
       setNewTag("");
+    }
+  };
+
+  const handleAiBatchImport = async () => {
+    if (!state.geminiApiKey.trim()) {
+      alert("请先到个人中心设置 Gemini API Key。");
+      return;
+    }
+    if (!aiRawText.trim()) {
+      alert("请先粘贴群聊聊天记录文本。");
+      return;
+    }
+
+    setAiImporting(true);
+    try {
+      const todos = await generateTodosByGemini({
+        apiKey: state.geminiApiKey,
+        model: aiModel,
+        rawText: aiRawText,
+      });
+
+      todos.forEach((todo) => {
+        dispatch({
+          type: "ADD_MEMO",
+          payload: {
+            content: todo.content,
+            tag: "AI导入",
+            priority: "medium",
+            dueDate: todo.dueDate,
+          },
+        });
+      });
+
+      dispatch({ type: "ADD_MEMO_TAG", payload: "AI导入" });
+      dispatch({ type: "SET_GEMINI_MODEL", payload: aiModel });
+      alert(`已导入 ${todos.length} 条待办。`);
+      setAiRawText("");
+      setShowAiImportDialog(false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "AI 导入失败，请稍后重试。");
+    } finally {
+      setAiImporting(false);
     }
   };
 
@@ -176,6 +228,12 @@ export default function NotesPanel() {
           </div>
         </div>
         <div className="flex gap-1">
+          <button
+            onClick={() => setShowAiImportDialog(true)}
+            className="px-3 py-1 rounded-xl transition-colors whitespace-nowrap text-[11px] font-medium h-6 flex items-center bg-violet-100 text-violet-700 hover:bg-violet-200"
+          >
+            AI 辅助批量导入待办
+          </button>
           <button 
             onClick={() => dispatch({ type: "SET_SHOW_DONE_MEMOS", payload: !state.showDoneMemos })} 
             className={`px-3 py-1 rounded-xl transition-colors whitespace-nowrap text-[11px] font-medium h-6 flex items-center ${state.showDoneMemos ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
@@ -359,6 +417,59 @@ export default function NotesPanel() {
           ))
         )}
       </div>
+
+      <Dialog open={showAiImportDialog} onOpenChange={setShowAiImportDialog}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>AI 辅助批量导入待办</DialogTitle>
+            <DialogDescription>
+              粘贴群聊聊天记录文本后，系统会调用 Gemini 自动抽取待办并写入列表。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-gray-600 block mb-1">模型</label>
+              <select
+                value={aiModel}
+                onChange={(e) => setAiModel(e.target.value)}
+                className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-300"
+              >
+                {GEMINI_MODELS.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-600 block mb-1">群聊聊天记录文本</label>
+              <textarea
+                value={aiRawText}
+                onChange={(e) => setAiRawText(e.target.value)}
+                placeholder="请粘贴聊天记录文本..."
+                rows={12}
+                className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm resize-y border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-300"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setShowAiImportDialog(false)}
+              className="px-3 py-1.5 rounded-lg text-xs text-gray-500 hover:bg-gray-200"
+              disabled={aiImporting}
+            >
+              取消
+            </button>
+            <button
+              onClick={handleAiBatchImport}
+              disabled={aiImporting}
+              className="px-3 py-1.5 rounded-lg bg-violet-500 text-white text-xs font-medium disabled:opacity-50"
+            >
+              {aiImporting ? "处理中..." : "确定导入"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -126,6 +126,8 @@ export interface GameState {
   memos: MemoEntry[];
   memoTags: string[];
   showDoneMemos: boolean;
+  geminiApiKey: string;
+  geminiModel: string;
 
   // Notes
   notes: NoteEntry[];
@@ -392,6 +394,8 @@ type GameAction =
   | { type: "ADD_MEMO_TAG"; payload: string }
   | { type: "DELETE_MEMO_TAG"; payload: string }
   | { type: "SET_SHOW_DONE_MEMOS"; payload: boolean }
+  | { type: "SET_GEMINI_API_KEY"; payload: string }
+  | { type: "SET_GEMINI_MODEL"; payload: string }
   | { type: "ADD_NOTE"; payload: { content: string } }
   | { type: "UPDATE_NOTE"; payload: { id: string; content: string } }
   | { type: "DELETE_NOTE"; payload: string }
@@ -458,6 +462,8 @@ const initialState: GameState = {
   memos: [],
   memoTags: ["学习", "待查", "论文"],
   showDoneMemos: false,
+  geminiApiKey: "",
+  geminiModel: "gemini-1.5-flash",
   notes: [],
   stickyNotes: [],
   habits: [],
@@ -709,6 +715,10 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "SET_SHOW_DONE_MEMOS":
       return { ...state, showDoneMemos: action.payload };
+    case "SET_GEMINI_API_KEY":
+      return { ...state, geminiApiKey: action.payload };
+    case "SET_GEMINI_MODEL":
+      return { ...state, geminiModel: action.payload };
 
     case "ADD_HABIT":
       return {

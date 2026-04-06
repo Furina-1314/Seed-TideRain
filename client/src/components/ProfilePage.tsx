@@ -1,6 +1,7 @@
 import { useGame } from "@/contexts/GameContext";
 import { useRef, useMemo } from "react";
 import { X, Download, Upload, Trophy, Calendar, Clock, Target, Flame, Award, TrendingUp, ImagePlus, RotateCcw, Lock, Unlock, BarChart3, Zap, CheckSquare, Trash2, Sparkles } from "lucide-react";
+import { GEMINI_MODELS } from "@/lib/todoAi";
 
 interface ProfilePageProps {
   onClose: () => void;
@@ -71,6 +72,8 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
         notes: [],
         heatmapData: [],
         memoTags: ["学习", "待查", "论文"],
+        geminiApiKey: "",
+        geminiModel: "gemini-1.5-flash",
         diaryEntries: {},
         customBackground: null,
       },
@@ -481,6 +484,41 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
               <p className="text-xs text-gray-400 mt-3">
                 锁定跳过按钮可以帮助你保持专注，避免轻易跳过番茄钟
               </p>
+            </div>
+          </div>
+
+          <hr className="border-gray-200 my-6" />
+
+          {/* AI 导入设置 */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6">
+            <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+              <Sparkles size={16} /> AI 待办导入设置
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-gray-600 mb-1 block">Gemini API Key（仅本地存储）</label>
+                <input
+                  type="password"
+                  value={state.geminiApiKey}
+                  onChange={(e) => dispatch({ type: "SET_GEMINI_API_KEY", payload: e.target.value })}
+                  placeholder="请输入你的 Gemini API Key"
+                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-600 mb-1 block">默认模型</label>
+                <select
+                  value={state.geminiModel}
+                  onChange={(e) => dispatch({ type: "SET_GEMINI_MODEL", payload: e.target.value })}
+                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                >
+                  {GEMINI_MODELS.map((model) => (
+                    <option key={model} value={model}>
+                      {model}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
