@@ -463,7 +463,7 @@ const initialState: GameState = {
   memoTags: ["学习", "待查", "论文"],
   showDoneMemos: false,
   geminiApiKey: "",
-  geminiModel: "gemini-1.5-flash",
+  geminiModel: "gemini-3-flash-preview",
   notes: [],
   stickyNotes: [],
   habits: [],

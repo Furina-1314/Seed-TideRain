@@ -73,7 +73,7 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
         heatmapData: [],
         memoTags: ["学习", "待查", "论文"],
         geminiApiKey: "",
-        geminiModel: "gemini-1.5-flash",
+        geminiModel: "gemini-3-flash-preview",
         diaryEntries: {},
         customBackground: null,
       },

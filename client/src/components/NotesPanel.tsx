@@ -53,7 +53,7 @@ export default function NotesPanel() {
   const [showNewTag, setShowNewTag] = useState(false);
   const [showAiImportDialog, setShowAiImportDialog] = useState(false);
   const [aiRawText, setAiRawText] = useState("");
-  const [aiModel, setAiModel] = useState(state.geminiModel || "gemini-1.5-flash");
+  const [aiModel, setAiModel] = useState(state.geminiModel || "gemini-3-flash-preview");
   const [aiImporting, setAiImporting] = useState(false);
   const newTagRef = useRef<HTMLDivElement>(null);
 
@@ -78,7 +78,7 @@ export default function NotesPanel() {
   }, [showNewTag]);
 
   useEffect(() => {
-    setAiModel(state.geminiModel || "gemini-1.5-flash");
+    setAiModel(state.geminiModel || "gemini-3-flash-preview");
   }, [state.geminiModel]);
 
   const handleAdd = () => {
