@@ -153,6 +153,35 @@ export interface GameState {
   customBackground: string | null;
 }
 
+function createUniqueMemoId(existingIds: Set<string>) {
+  let id = "";
+
+  do {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      id = crypto.randomUUID();
+    } else {
+      id = `memo-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+  } while (existingIds.has(id));
+
+  return id;
+}
+
+function normalizeMemoEntries(memos: MemoEntry[]) {
+  const seenIds = new Set<string>();
+
+  return memos.map((memo) => {
+    if (!memo.id || seenIds.has(memo.id)) {
+      const nextId = createUniqueMemoId(seenIds);
+      seenIds.add(nextId);
+      return { ...memo, id: nextId };
+    }
+
+    seenIds.add(memo.id);
+    return memo;
+  });
+}
+
 // ============ Plant Stages ============
 export const PLANT_STAGES: PlantStage[] = [
   {
@@ -667,11 +696,12 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "ADD_MEMO": {
       const now = new Date().toISOString();
+      const existingIds = new Set(state.memos.map((memo) => memo.id));
       return {
         ...state,
         memos: [
           {
-            id: Date.now().toString(),
+            id: createUniqueMemoId(existingIds),
             content: action.payload.content,
             tag: action.payload.tag,
             priority: action.payload.priority,
@@ -1154,6 +1184,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
             type: "LOAD_STATE",
             payload: {
               ...parsed,
+              memos: normalizeMemoEntries(Array.isArray(parsed.memos) ? parsed.memos : []),
               musicTracks: validatedTracks,
               isTimerRunning: false,
               timerMode: parsed.timerMode === "focus" ? "focus" : "break",
