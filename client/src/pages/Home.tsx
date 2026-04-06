@@ -353,40 +353,40 @@ export default function Home() {
     () => [
       {
         title: "日历与个人中心",
-        description: "这里是中间顶部按钮，可快速打开日历和个人中心，查看计划与个人数据。",
+        description: "此处可快速打开日历和个人中心，查看计划与个人数据。",
         targetClassName: "top-16 left-1/2 -translate-x-1/2",
       },
       {
         title: "专注计时",
-        description: "左上方为专注计时区，用于启动番茄钟、查看当前专注阶段与剩余时间。",
-        targetClassName: "top-8 left-6 max-w-xs",
+        description: "此处为专注计时区，用于启动番茄钟、查看当前专注阶段与剩余时间。",
+        targetClassName: "top-6 left-[360px] max-w-sm",
       },
       {
         title: "环境音乐",
-        description: "左下方为环境音乐区，可以播放/暂停并切换环境音，营造专注氛围。",
-        targetClassName: "bottom-28 left-6 max-w-xs",
+        description: "此处环境音乐区，可以播放/暂停并切换环境音，营造专注氛围。",
+        targetClassName: "top-[372px] left-[360px] max-w-sm",
       },
       {
         title: "数据统计",
-        description: "右上方区域展示植物成长和统计信息，帮助你了解专注进展。",
-        targetClassName: "top-8 right-6 max-w-xs",
+        description: "此处展示植物成长和统计信息，帮助你了解专注进展。",
+        targetClassName: "top-6 right-[400px] max-w-sm",
       },
       {
-        title: "代办处理",
-        description: "右侧标签可切换到“待办”，用于创建、勾选与整理当天任务。",
-        targetClassName: "top-52 right-6 max-w-xs",
+        title: "待办处理",
+        description: "切换到“待办”，创建、勾选与整理当天任务。",
+        targetClassName: "top-[248px] right-[400px] max-w-sm",
         setup: () => setRightTab("todos"),
       },
       {
         title: "习惯记录",
-        description: "右侧标签切换到“习惯”后，可记录打卡并追踪连续完成天数。",
-        targetClassName: "top-52 right-6 max-w-xs",
+        description: "切换到“习惯”，可记录打卡并追踪连续完成天数。",
+        targetClassName: "top-[248px] right-[400px] max-w-sm",
         setup: () => setRightTab("habits"),
       },
       {
         title: "笔记",
-        description: "右侧标签切换到“笔记”后，可编辑笔记并拖拽到主界面生成便利贴。",
-        targetClassName: "top-52 right-6 max-w-xs",
+        description: "切换到“笔记”，可编辑笔记并拖拽到主界面生成便利贴。",
+        targetClassName: "top-[248px] right-[400px] max-w-sm",
         setup: () => setRightTab("notes"),
       },
     ],
@@ -422,6 +422,9 @@ export default function Home() {
     }
   };
 
+  const getGuideFocusClass = (steps: number[]) =>
+    showGuide && steps.includes(guideStepIndex) ? "relative z-[75]" : "";
+
   return (
     <div className="fixed inset-0 overflow-hidden">
       {/* 背景层 */}
@@ -445,7 +448,7 @@ export default function Home() {
       <FloatingParticles />
 
       {/* 顶部中间工具栏 */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex gap-2">
+      <div className={`absolute top-4 left-1/2 -translate-x-1/2 flex gap-2 ${showGuide && guideStepIndex === 0 ? "z-[75]" : "z-40"}`}>
         <Tooltip>
           <TooltipTrigger asChild>
             <button onClick={() => setShowCalendar(true)} className="p-2.5 rounded-xl bg-white/80 shadow-lg hover:bg-white transition-colors text-gray-600">
@@ -465,14 +468,14 @@ export default function Home() {
       </div>
 
       {/* 桌面端布局 */}
-      <div className="relative z-10 h-full hidden lg:flex">
+      <div className="relative h-full hidden lg:flex">
         {/* 左侧面板 */}
         <div className={`shrink-0 h-full flex flex-col transition-all duration-300 ${leftCollapsed ? "w-0 opacity-0" : "w-[340px] opacity-100"}`}>
           <div className="h-full p-4 flex flex-col gap-3 overflow-hidden">
-            <div className="shrink-0">
+            <div className={`shrink-0 ${getGuideFocusClass([1])}`}>
               <TimerPanel compact />
             </div>
-            <div className="flex-1 min-h-0">
+            <div className={`flex-1 min-h-0 ${getGuideFocusClass([2])}`}>
               <SoundPanel />
             </div>
           </div>
@@ -519,7 +522,7 @@ export default function Home() {
 
         {/* 中间 */}
         <div
-          className="flex-1 relative flex items-center justify-center p-4"
+          className="flex-1 relative z-20 flex items-center justify-center p-4"
           onDragOver={(e) => {
             if (e.dataTransfer.types.includes("application/x-note-id")) {
               e.preventDefault();
@@ -608,7 +611,7 @@ export default function Home() {
         {/* 右侧面板 */}
         <div className={`shrink-0 h-full transition-all duration-300 ${rightCollapsed ? "w-0 opacity-0" : "w-[380px] opacity-100"}`}>
           <div className="h-full p-4 flex flex-col gap-4 overflow-hidden">
-            <div className="shrink-0">
+            <div className={`shrink-0 ${getGuideFocusClass([3])}`}>
               <PlantInfo />
             </div>
             {/* 标签页添加图标 */}
@@ -620,7 +623,7 @@ export default function Home() {
                 </button>
               ))}
             </div>
-            <div className="flex-1 min-h-0 overflow-hidden">
+            <div className={`flex-1 min-h-0 overflow-hidden ${getGuideFocusClass([4, 5, 6])}`}>
               {renderRightContent()}
             </div>
           </div>
