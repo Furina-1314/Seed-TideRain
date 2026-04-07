@@ -23,6 +23,8 @@ export interface MemoEntry {
   priority: "low" | "medium" | "high";
   done: boolean;
   dueDate?: string;
+  reminderMinutesBefore?: number;
+  reminderNotifiedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -417,8 +419,8 @@ type GameAction =
   | { type: "SET_SCENE"; payload: string | null }
   | { type: "SET_CUSTOM_MIX"; payload: Record<string, number> }
   | { type: "SET_MASTER_VOLUME"; payload: number }
-  | { type: "ADD_MEMO"; payload: { content: string; tag: string; priority: MemoEntry["priority"]; dueDate?: string } }
-  | { type: "UPDATE_MEMO"; payload: { id: string; content?: string; tag?: string; priority?: MemoEntry["priority"]; done?: boolean; dueDate?: string } }
+  | { type: "ADD_MEMO"; payload: { content: string; tag: string; priority: MemoEntry["priority"]; dueDate?: string; reminderMinutesBefore?: number } }
+  | { type: "UPDATE_MEMO"; payload: { id: string; content?: string; tag?: string; priority?: MemoEntry["priority"]; done?: boolean; dueDate?: string; reminderMinutesBefore?: number | null; reminderNotifiedAt?: string | null } }
   | { type: "DELETE_MEMO"; payload: string }
   | { type: "ADD_MEMO_TAG"; payload: string }
   | { type: "DELETE_MEMO_TAG"; payload: string }
@@ -433,6 +435,7 @@ type GameAction =
   | { type: "RESIZE_STICKY_NOTE"; payload: { id: string; width: number; height: number } }
   | { type: "CLOSE_STICKY_NOTE"; payload: string }
   | { type: "SET_STICKY_NOTE_COLOR"; payload: { id: string; color: string } }
+  | { type: "CREATE_REMINDER_STICKY"; payload: { content: string } }
   | { type: "ADD_HABIT"; payload: { name: string } }
   | { type: "TOGGLE_HABIT"; payload: string }
   | { type: "DELETE_HABIT"; payload: string }
@@ -707,6 +710,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             priority: action.payload.priority,
             done: false,
             dueDate: action.payload.dueDate,
+            reminderMinutesBefore: action.payload.reminderMinutesBefore,
             createdAt: now,
             updatedAt: now,
           },
@@ -727,6 +731,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 ...(action.payload.priority !== undefined && { priority: action.payload.priority }),
                 ...(action.payload.done !== undefined && { done: action.payload.done }),
                 ...(action.payload.dueDate !== undefined && { dueDate: action.payload.dueDate }),
+                ...(action.payload.reminderMinutesBefore !== undefined && { reminderMinutesBefore: action.payload.reminderMinutesBefore ?? undefined }),
+                ...(action.payload.reminderNotifiedAt !== undefined && { reminderNotifiedAt: action.payload.reminderNotifiedAt ?? undefined }),
                 updatedAt: new Date().toISOString(),
               }
             : m
@@ -874,6 +880,31 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           sticky.id === action.payload.id ? { ...sticky, color: action.payload.color } : sticky
         ),
       };
+
+    case "CREATE_REMINDER_STICKY": {
+      const now = new Date().toISOString();
+      const noteId = Date.now().toString();
+      const stickyCount = state.stickyNotes.length;
+      return {
+        ...state,
+        notes: [
+          { id: noteId, content: action.payload.content, createdAt: now, updatedAt: now },
+          ...state.notes,
+        ],
+        stickyNotes: [
+          ...state.stickyNotes,
+          {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            noteId,
+            x: 80 + (stickyCount % 4) * 26,
+            y: 100 + (stickyCount % 5) * 24,
+            width: 280,
+            height: 220,
+            color: "#fff8cf",
+          },
+        ],
+      };
+    }
 
     case "SET_DIARY_ENTRY":
       return {
