@@ -23,6 +23,8 @@ export interface MemoEntry {
   priority: "low" | "medium" | "high";
   done: boolean;
   dueDate?: string;
+  reminderMinutesBefore?: number;
+  reminderNotifiedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -417,8 +419,8 @@ type GameAction =
   | { type: "SET_SCENE"; payload: string | null }
   | { type: "SET_CUSTOM_MIX"; payload: Record<string, number> }
   | { type: "SET_MASTER_VOLUME"; payload: number }
-  | { type: "ADD_MEMO"; payload: { content: string; tag: string; priority: MemoEntry["priority"]; dueDate?: string } }
-  | { type: "UPDATE_MEMO"; payload: { id: string; content?: string; tag?: string; priority?: MemoEntry["priority"]; done?: boolean; dueDate?: string } }
+  | { type: "ADD_MEMO"; payload: { content: string; tag: string; priority: MemoEntry["priority"]; dueDate?: string; reminderMinutesBefore?: number } }
+  | { type: "UPDATE_MEMO"; payload: { id: string; content?: string; tag?: string; priority?: MemoEntry["priority"]; done?: boolean; dueDate?: string; reminderMinutesBefore?: number | null; reminderNotifiedAt?: string | null } }
   | { type: "DELETE_MEMO"; payload: string }
   | { type: "ADD_MEMO_TAG"; payload: string }
   | { type: "DELETE_MEMO_TAG"; payload: string }
@@ -707,6 +709,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             priority: action.payload.priority,
             done: false,
             dueDate: action.payload.dueDate,
+            reminderMinutesBefore: action.payload.reminderMinutesBefore,
             createdAt: now,
             updatedAt: now,
           },
@@ -727,6 +730,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
                 ...(action.payload.priority !== undefined && { priority: action.payload.priority }),
                 ...(action.payload.done !== undefined && { done: action.payload.done }),
                 ...(action.payload.dueDate !== undefined && { dueDate: action.payload.dueDate }),
+                ...(action.payload.reminderMinutesBefore !== undefined && { reminderMinutesBefore: action.payload.reminderMinutesBefore ?? undefined }),
+                ...(action.payload.reminderNotifiedAt !== undefined && { reminderNotifiedAt: action.payload.reminderNotifiedAt ?? undefined }),
                 updatedAt: new Date().toISOString(),
               }
             : m

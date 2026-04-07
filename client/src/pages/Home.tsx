@@ -94,17 +94,17 @@ function StickyNotesOverlay({
         return (
           <div
             key={sticky.id}
-            className="absolute z-30 rounded-xl border border-gray-200 shadow-lg backdrop-blur-sm"
+            className="absolute z-30 rounded-2xl border border-white/30 shadow-2xl backdrop-blur-md overflow-hidden"
             style={{
               left: sticky.x,
               top: sticky.y,
               width: sticky.width || 224,
               height: sticky.height || 192,
-              backgroundColor: sticky.color || "#ffffff",
+              backgroundColor: sticky.color || "#fffef8",
             }}
           >
             <div
-              className="flex items-center justify-between px-2 py-1 bg-yellow-200/80 rounded-t-xl cursor-move"
+              className="flex items-center justify-between px-2.5 py-1.5 bg-white/75 border-b border-white/40 cursor-move"
               onMouseDown={(e) => {
                 e.preventDefault();
                 const startX = e.clientX;
@@ -124,12 +124,12 @@ function StickyNotesOverlay({
               }}
             >
               <div className="flex items-center gap-1">
-                <span className="text-[10px] text-gray-700 font-semibold">便利贴</span>
+                <span className="text-[10px] text-emerald-600 font-semibold">便利贴</span>
                 {["#ffffff", "#fff4b2", "#ffd9e8", "#d9f0ff", "#e6ffd9"].map((color) => (
                   <button
                     key={color}
                     onClick={() => onColor(sticky.id, color)}
-                    className={`w-3.5 h-3.5 rounded-full border ${sticky.color === color ? "border-gray-700" : "border-gray-300"}`}
+                  className={`w-3.5 h-3.5 rounded-full border ${sticky.color === color ? "border-emerald-600" : "border-gray-300"}`}
                     style={{ backgroundColor: color }}
                     title="设置便利贴颜色"
                   />
@@ -142,18 +142,18 @@ function StickyNotesOverlay({
                   title="自定义颜色"
                 />
               </div>
-              <button onClick={() => onClose(sticky.id)} className="p-1 rounded hover:bg-gray-200/70 text-gray-700">
+              <button onClick={() => onClose(sticky.id)} className="p-1 rounded-lg hover:bg-white/70 text-gray-700">
                 <X size={12} />
               </button>
             </div>
             <textarea
               value={note.content}
               onChange={(e) => onUpdate(note.id, e.target.value)}
-              className="w-full resize-none bg-transparent p-2 text-xs text-gray-700 focus:outline-none"
-              style={{ height: (sticky.height || 192) - 36 }}
+              className="w-full resize-none bg-transparent p-2.5 text-xs text-gray-700 focus:outline-none leading-relaxed"
+              style={{ height: (sticky.height || 192) - 40 }}
             />
             <div
-              className="absolute right-0 bottom-0 w-4 h-4 cursor-se-resize bg-gray-400/60 hover:bg-gray-500/70 rounded-tl-md"
+              className="absolute right-0 bottom-0 w-4 h-4 cursor-se-resize bg-white/70 hover:bg-white/90 rounded-tl-lg border-l border-t border-white/50"
               onMouseDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
