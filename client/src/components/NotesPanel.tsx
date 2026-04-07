@@ -55,16 +55,6 @@ export default function NotesPanel() {
   const [reminderPanelMemoId, setReminderPanelMemoId] = useState<string | null>(null);
   const [reminderHours, setReminderHours] = useState(1);
   const [reminderMinutes, setReminderMinutes] = useState(0);
-  const [reminderStickies, setReminderStickies] = useState<Array<{
-    id: string;
-    memoId: string;
-    content: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    color: string;
-  }>>([]);
   const [aiRawText, setAiRawText] = useState("");
   const [aiModel, setAiModel] = useState(state.geminiModel || "gemini-3-flash-preview");
   const [aiImporting, setAiImporting] = useState(false);
@@ -277,7 +267,12 @@ export default function NotesPanel() {
       },
     });
     if (shouldRemindNow && targetMemo) {
-      pushReminderStickies([targetMemo]);
+      dispatch({
+        type: "CREATE_REMINDER_STICKY",
+        payload: {
+          content: `【待办提醒】\n${targetMemo.content}\n\n截止：${targetMemo.dueDate ? formatDateTime(targetMemo.dueDate) : "未设置"}`,
+        },
+      });
     }
     setReminderPanelMemoId(null);
   };

@@ -203,6 +203,54 @@ export default function Home() {
   const hasShownStartupDialogRef = useRef(false);
   const { state, dispatch } = useGame();
 
+  useEffect(() => {
+    const formatDueText = (value?: string) => {
+      if (!value) return "未设置";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "未设置";
+      return date.toLocaleString("zh-CN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).replace(/\//g, "-");
+    };
+
+    const triggerDueReminders = () => {
+      const now = Date.now();
+      const dueMemos = state.memos.filter((memo) => {
+        if (memo.done || !memo.dueDate || memo.reminderMinutesBefore === undefined || memo.reminderNotifiedAt) {
+          return false;
+        }
+        const dueTime = new Date(memo.dueDate).getTime();
+        if (Number.isNaN(dueTime)) return false;
+        return now >= dueTime - memo.reminderMinutesBefore * 60 * 1000;
+      });
+
+      dueMemos.forEach((memo) => {
+        dispatch({
+          type: "CREATE_REMINDER_STICKY",
+          payload: {
+            content: `【待办提醒】\n${memo.content}\n\n截止：${formatDueText(memo.dueDate)}`,
+          },
+        });
+        dispatch({
+          type: "UPDATE_MEMO",
+          payload: {
+            id: memo.id,
+            reminderNotifiedAt: new Date().toISOString(),
+          },
+        });
+      });
+    };
+
+    triggerDueReminders();
+    const timer = window.setInterval(triggerDueReminders, 30000);
+    return () => window.clearInterval(timer);
+  }, [dispatch, state.memos]);
+
   const currentPlantDialogType = useMemo(
     // 明确判断：番茄钟未工作 => type "a"；番茄钟工作中 => type "b"
     () => (state.isTimerRunning ? "i" : "a"),
