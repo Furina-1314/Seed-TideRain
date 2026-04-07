@@ -1,6 +1,6 @@
 //待办页
 import { useGame, type MemoEntry } from "@/contexts/GameContext";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useDeleteConfirm } from "@/hooks/useDeleteConfirm";
 import { Plus, Trash2, Lightbulb, Check, Edit2, Search, X, Tag, BellRing } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -55,7 +55,16 @@ export default function NotesPanel() {
   const [reminderPanelMemoId, setReminderPanelMemoId] = useState<string | null>(null);
   const [reminderHours, setReminderHours] = useState(1);
   const [reminderMinutes, setReminderMinutes] = useState(0);
-  const [activeReminders, setActiveReminders] = useState<MemoEntry[]>([]);
+  const [reminderStickies, setReminderStickies] = useState<Array<{
+    id: string;
+    memoId: string;
+    content: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    color: string;
+  }>>([]);
   const [aiRawText, setAiRawText] = useState("");
   const [aiModel, setAiModel] = useState(state.geminiModel || "gemini-3-flash-preview");
   const [aiImporting, setAiImporting] = useState(false);
@@ -85,42 +94,57 @@ export default function NotesPanel() {
     setAiModel(state.geminiModel || "gemini-3-flash-preview");
   }, [state.geminiModel]);
 
+  const pushReminderStickies = useCallback((memos: MemoEntry[]) => {
+    setReminderStickies((prev) => {
+      const existingMemoIds = new Set(prev.map((item) => item.memoId));
+      const next = [...prev];
+      memos.forEach((memo, index) => {
+        if (existingMemoIds.has(memo.id)) return;
+        next.push({
+          id: `${memo.id}-${Date.now()}-${index}`,
+          memoId: memo.id,
+          content: `【待办提醒】\n${memo.content}\n\n截止：${memo.dueDate ? formatDateTime(memo.dueDate) : "未设置"}`,
+          x: Math.max(20, window.innerWidth - 320 - index * 24),
+          y: Math.min(window.innerHeight - 260, 80 + index * 24),
+          width: 280,
+          height: 220,
+          color: "#fff8cf",
+        });
+      });
+      return next;
+    });
+  }, []);
+
+  const checkAndTriggerDueReminders = useCallback(() => {
+    const now = Date.now();
+    const dueReminders = state.memos.filter((memo) => {
+      if (memo.done || !memo.dueDate || memo.reminderMinutesBefore === undefined || memo.reminderNotifiedAt) {
+        return false;
+      }
+      const dueTime = new Date(memo.dueDate).getTime();
+      if (Number.isNaN(dueTime)) return false;
+      const remindAt = dueTime - memo.reminderMinutesBefore * 60 * 1000;
+      return now >= remindAt;
+    });
+
+    if (dueReminders.length === 0) return;
+
+    pushReminderStickies(dueReminders);
+    dueReminders.forEach((memo) => {
+      dispatch({
+        type: "UPDATE_MEMO",
+        payload: { id: memo.id, reminderNotifiedAt: new Date().toISOString() },
+      });
+    });
+  }, [dispatch, pushReminderStickies, state.memos]);
+
   useEffect(() => {
+    checkAndTriggerDueReminders();
     const timer = window.setInterval(() => {
-      const now = Date.now();
-      const dueReminders = state.memos.filter((memo) => {
-        if (memo.done || !memo.dueDate || memo.reminderMinutesBefore === undefined || memo.reminderNotifiedAt) {
-          return false;
-        }
-        const dueTime = new Date(memo.dueDate).getTime();
-        if (Number.isNaN(dueTime)) return false;
-        const remindAt = dueTime - memo.reminderMinutesBefore * 60 * 1000;
-        return now >= remindAt;
-      });
-
-      if (dueReminders.length === 0) return;
-
-      setActiveReminders((prev) => {
-        const existingIds = new Set(prev.map((item) => item.id));
-        const next = [...prev];
-        dueReminders.forEach((memo) => {
-          if (!existingIds.has(memo.id)) {
-            next.push(memo);
-          }
-        });
-        return next;
-      });
-
-      dueReminders.forEach((memo) => {
-        dispatch({
-          type: "UPDATE_MEMO",
-          payload: { id: memo.id, reminderNotifiedAt: new Date().toISOString() },
-        });
-      });
+      checkAndTriggerDueReminders();
     }, 30000);
-
     return () => window.clearInterval(timer);
-  }, [dispatch, state.memos]);
+  }, [checkAndTriggerDueReminders]);
 
   const handleAdd = () => {
     if (!newContent.trim()) return;
@@ -240,10 +264,21 @@ export default function NotesPanel() {
   const saveReminder = () => {
     if (!reminderPanelMemoId) return;
     const totalMinutes = Math.max(0, reminderHours * 60 + reminderMinutes);
+    const targetMemo = state.memos.find((m) => m.id === reminderPanelMemoId);
+    const dueTime = targetMemo?.dueDate ? new Date(targetMemo.dueDate).getTime() : NaN;
+    const shouldRemindNow = Number.isFinite(dueTime) && Date.now() >= dueTime - totalMinutes * 60 * 1000;
+
     dispatch({
       type: "UPDATE_MEMO",
-      payload: { id: reminderPanelMemoId, reminderMinutesBefore: totalMinutes, reminderNotifiedAt: null },
+      payload: {
+        id: reminderPanelMemoId,
+        reminderMinutesBefore: totalMinutes,
+        reminderNotifiedAt: shouldRemindNow ? new Date().toISOString() : null,
+      },
     });
+    if (shouldRemindNow && targetMemo) {
+      pushReminderStickies([targetMemo]);
+    }
     setReminderPanelMemoId(null);
   };
 
@@ -527,24 +562,86 @@ export default function NotesPanel() {
         )}
       </div>
 
-      {activeReminders.length > 0 && (
-        <div className="fixed bottom-5 right-5 z-[85] space-y-2">
-          {activeReminders.map((memo) => (
-            <div key={memo.id} className="w-72 rounded-2xl border border-white/30 shadow-2xl backdrop-blur-md overflow-hidden bg-[#fff8cf]">
-              <div className="flex items-center justify-between px-3 py-1.5 bg-white/70 border-b border-white/40">
-                <span className="text-[11px] text-emerald-600 font-semibold">待办提醒</span>
-                <button onClick={() => setActiveReminders((prev) => prev.filter((item) => item.id !== memo.id))} className="p-1 rounded-lg hover:bg-white/70 text-gray-700">
-                  <X size={12} />
-                </button>
-              </div>
-              <div className="px-3 py-2.5">
-                <p className="text-xs text-gray-700 leading-relaxed">{memo.content}</p>
-                <p className="text-[10px] text-amber-700 mt-1">截止：{memo.dueDate ? formatDateTime(memo.dueDate) : "未设置"}</p>
-              </div>
+      {reminderStickies.map((sticky) => (
+        <div
+          key={sticky.id}
+          className="fixed z-[90] rounded-2xl border border-white/30 shadow-2xl backdrop-blur-md overflow-hidden"
+          style={{ left: sticky.x, top: sticky.y, width: sticky.width, height: sticky.height, backgroundColor: sticky.color }}
+        >
+          <div
+            className="flex items-center justify-between px-2.5 py-1.5 bg-white/75 border-b border-white/40 cursor-move"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              const startX = e.clientX;
+              const startY = e.clientY;
+              const originX = sticky.x;
+              const originY = sticky.y;
+              const handleMove = (moveEvent: MouseEvent) => {
+                setReminderStickies((prev) => prev.map((item) =>
+                  item.id === sticky.id
+                    ? { ...item, x: originX + moveEvent.clientX - startX, y: originY + moveEvent.clientY - startY }
+                    : item
+                ));
+              };
+              const handleUp = () => {
+                document.removeEventListener("mousemove", handleMove);
+                document.removeEventListener("mouseup", handleUp);
+              };
+              document.addEventListener("mousemove", handleMove);
+              document.addEventListener("mouseup", handleUp);
+            }}
+          >
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] text-emerald-600 font-semibold">提醒便利贴</span>
+              {["#fff8cf", "#fff4b2", "#ffd9e8", "#d9f0ff", "#e6ffd9"].map((color) => (
+                <button
+                  key={color}
+                  onClick={() => setReminderStickies((prev) => prev.map((item) => item.id === sticky.id ? { ...item, color } : item))}
+                  className={`w-3.5 h-3.5 rounded-full border ${sticky.color === color ? "border-emerald-600" : "border-gray-300"}`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
             </div>
-          ))}
+            <button onClick={() => setReminderStickies((prev) => prev.filter((item) => item.id !== sticky.id))} className="p-1 rounded-lg hover:bg-white/70 text-gray-700">
+              <X size={12} />
+            </button>
+          </div>
+          <textarea
+            value={sticky.content}
+            onChange={(e) => setReminderStickies((prev) => prev.map((item) => item.id === sticky.id ? { ...item, content: e.target.value } : item))}
+            className="w-full resize-none bg-transparent p-2.5 text-xs text-gray-700 focus:outline-none leading-relaxed"
+            style={{ height: sticky.height - 40 }}
+          />
+          <div
+            className="absolute right-0 bottom-0 w-4 h-4 cursor-se-resize bg-white/70 hover:bg-white/90 rounded-tl-lg border-l border-t border-white/50"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const startX = e.clientX;
+              const startY = e.clientY;
+              const originWidth = sticky.width;
+              const originHeight = sticky.height;
+              const handleMove = (moveEvent: MouseEvent) => {
+                setReminderStickies((prev) => prev.map((item) =>
+                  item.id === sticky.id
+                    ? {
+                        ...item,
+                        width: Math.max(180, originWidth + moveEvent.clientX - startX),
+                        height: Math.max(120, originHeight + moveEvent.clientY - startY),
+                      }
+                    : item
+                ));
+              };
+              const handleUp = () => {
+                document.removeEventListener("mousemove", handleMove);
+                document.removeEventListener("mouseup", handleUp);
+              };
+              document.addEventListener("mousemove", handleMove);
+              document.addEventListener("mouseup", handleUp);
+            }}
+          />
         </div>
-      )}
+      ))}
 
       <Dialog open={showAiImportDialog} onOpenChange={setShowAiImportDialog}>
         <DialogContent className="sm:max-w-2xl">
