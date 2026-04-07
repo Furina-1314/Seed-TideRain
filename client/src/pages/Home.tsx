@@ -125,7 +125,7 @@ function StickyNotesOverlay({
               }}
             >
               <div className="flex items-center gap-1">
-                <span className="text-[10px] text-emerald-600 font-semibold">便利贴</span>
+                
                 {["#ffffff", "#fff4b2", "#ffd9e8", "#d9f0ff", "#e6ffd9"].map((color) => (
                   <button
                     key={color}
