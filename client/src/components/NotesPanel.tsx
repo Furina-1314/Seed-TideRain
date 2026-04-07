@@ -55,6 +55,8 @@ export default function NotesPanel() {
   const [reminderPanelMemoId, setReminderPanelMemoId] = useState<string | null>(null);
   const [reminderHours, setReminderHours] = useState(1);
   const [reminderMinutes, setReminderMinutes] = useState(0);
+  // 兼容性兜底：提醒便利贴已迁移到 Home 全局层，此占位可避免旧热更新缓存引用报错。
+  const reminderStickies: never[] = [];
   const [aiRawText, setAiRawText] = useState("");
   const [aiModel, setAiModel] = useState(state.geminiModel || "gemini-3-flash-preview");
   const [aiImporting, setAiImporting] = useState(false);
