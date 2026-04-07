@@ -13,6 +13,7 @@ import CalendarView from "@/components/CalendarView";
 import FloatingParticles from "@/components/FloatingParticles";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  CheckSquare,
   FileText,
   BookText,
   Target,
@@ -364,7 +365,7 @@ export default function Home() {
   }, [showPlantDialog, plantDialog]);
 
   const rightTabs: { id: RightTab; label: string; icon: typeof FileText }[] = [
-    { id: "todos", label: "待办", icon: FileText },
+    { id: "todos", label: "待办", icon: CheckSquare },
     { id: "habits", label: "习惯", icon: Target },
     { id: "notes", label: "笔记", icon: BookText },
   ];
