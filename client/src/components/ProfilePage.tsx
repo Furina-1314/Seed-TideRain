@@ -1,5 +1,5 @@
 import { useGame } from "@/contexts/GameContext";
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useEffect, useState } from "react";
 import { X, Download, Upload, Trophy, Calendar, Clock, Target, Flame, Award, TrendingUp, ImagePlus, RotateCcw, Lock, Unlock, BarChart3, Zap, CheckSquare, Trash2, Sparkles } from "lucide-react";
 import { GEMINI_MODELS } from "@/lib/todoAi";
 
@@ -11,6 +11,9 @@ interface ProfilePageProps {
 export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps) {
   const { state, dispatch } = useGame();
   const bgInputRef = useRef<HTMLInputElement>(null);
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [hasGeminiApiKey, setHasGeminiApiKey] = useState(false);
+  const [savingApiKey, setSavingApiKey] = useState(false);
 
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
@@ -72,7 +75,6 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
         notes: [],
         heatmapData: [],
         memoTags: ["学习", "待查", "论文"],
-        geminiApiKey: "",
         geminiModel: "gemini-3-flash-preview",
         diaryEntries: {},
         customBackground: null,
@@ -224,6 +226,55 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
     }
     return result;
   }, [state.heatmapData]);
+
+  useEffect(() => {
+    const loadAiConfig = async () => {
+      try {
+        if (window.desktop?.isElectron && window.desktop.ai?.getConfig) {
+          const result = await window.desktop.ai.getConfig();
+          setHasGeminiApiKey(Boolean(result?.hasKey));
+          return;
+        }
+        const response = await fetch("/api/ai/config");
+        const data = await response.json().catch(() => ({}));
+        setHasGeminiApiKey(Boolean(data?.hasKey));
+      } catch {
+        setHasGeminiApiKey(false);
+      }
+    };
+    void loadAiConfig();
+  }, []);
+
+  const saveGeminiApiKey = async () => {
+    const apiKey = apiKeyInput.trim();
+    if (!apiKey) {
+      alert("请输入 Gemini API Key。");
+      return;
+    }
+    setSavingApiKey(true);
+    try {
+      if (window.desktop?.isElectron && window.desktop.ai?.setApiKey) {
+        await window.desktop.ai.setApiKey(apiKey);
+      } else {
+        const response = await fetch("/api/ai/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ apiKey }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data?.error || `保存失败（${response.status}）`);
+        }
+      }
+      setHasGeminiApiKey(true);
+      setApiKeyInput("");
+      alert("Gemini API Key 已保存到服务端。");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "保存 Gemini API Key 失败。");
+    } finally {
+      setSavingApiKey(false);
+    }
+  };
 
   const getHeatmapColor = (minutes: number) => {
     if (minutes === 0) return "bg-gray-100";
@@ -496,14 +547,27 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
             </h3>
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-gray-600 mb-1 block">Gemini API Key（仅本地存储）</label>
-                <input
-                  type="password"
-                  value={state.geminiApiKey}
-                  onChange={(e) => dispatch({ type: "SET_GEMINI_API_KEY", payload: e.target.value })}
-                  placeholder="请输入你的 Gemini API Key"
-                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                />
+                <label className="text-xs text-gray-600 mb-1 block">Gemini API Key（仅服务端保存）</label>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                    placeholder={hasGeminiApiKey ? "已配置，输入新 Key 可覆盖" : "请输入你的 Gemini API Key"}
+                    className="flex-1 bg-gray-50 rounded-lg px-3 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={saveGeminiApiKey}
+                    disabled={savingApiKey}
+                    className="px-3 py-2 rounded-lg bg-emerald-500 text-white text-sm disabled:opacity-50"
+                  >
+                    {savingApiKey ? "保存中..." : "保存"}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  当前状态：{hasGeminiApiKey ? "已配置" : "未配置"}
+                </p>
               </div>
               <div>
                 <label className="text-xs text-gray-600 mb-1 block">默认模型</label>
