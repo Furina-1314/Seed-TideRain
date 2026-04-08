@@ -103,12 +103,32 @@ function createSoundLayer(
       const lowpass = ctx.createBiquadFilter();
       lowpass.type = "lowpass";
       lowpass.frequency.value = 200;
-      thunderGain.gain.setValueAtTime(0, ctx.currentTime);
-      thunderGain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.3);
-      thunderGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2);
+      const rumbleDelay = 0.05 + Math.random() * 0.2;
+      const attack = 0.12 + Math.random() * 0.2;
+      const release = 2.2 + Math.random() * 1.8;
+      thunderGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      thunderGain.gain.exponentialRampToValueAtTime(0.38 + Math.random() * 0.2, ctx.currentTime + rumbleDelay + attack);
+      thunderGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + rumbleDelay + release);
       thunderSource.connect(lowpass).connect(thunderGain).connect(gainNode);
       thunderSource.start();
-      thunderSource.stop(ctx.currentTime + 2);
+      thunderSource.stop(ctx.currentTime + rumbleDelay + release + 0.1);
+
+      // 高频闪电“裂响”层，提升真实感
+      const crack = ctx.createOscillator();
+      const crackGain = ctx.createGain();
+      const crackFilter = ctx.createBiquadFilter();
+      crackFilter.type = "highpass";
+      crackFilter.frequency.value = 1800;
+      crack.type = "triangle";
+      const crackFreq = 900 + Math.random() * 900;
+      crack.frequency.setValueAtTime(crackFreq, ctx.currentTime);
+      crack.frequency.exponentialRampToValueAtTime(crackFreq * (1.6 + Math.random() * 0.7), ctx.currentTime + 0.06);
+      crackGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      crackGain.gain.exponentialRampToValueAtTime(0.15 + Math.random() * 0.1, ctx.currentTime + 0.02);
+      crackGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.14);
+      crack.connect(crackFilter).connect(crackGain).connect(gainNode);
+      crack.start();
+      crack.stop(ctx.currentTime + 0.16);
     }, 8000 + Math.random() * 15000);
     cleanups.push(() => clearInterval(thunderInterval));
   } else if (type === "ocean") {
@@ -152,19 +172,27 @@ function createSoundLayer(
   } else if (type === "birds") {
     const chirpInterval = setInterval(() => {
       if (ctx.state !== "running") return;
-      const osc = ctx.createOscillator();
-      const birdGain = ctx.createGain();
-      const baseFreq = 2000 + Math.random() * 3000;
-      osc.frequency.setValueAtTime(baseFreq, ctx.currentTime);
-      osc.frequency.linearRampToValueAtTime(baseFreq + 500, ctx.currentTime + 0.05);
-      osc.frequency.linearRampToValueAtTime(baseFreq - 200, ctx.currentTime + 0.1);
-      osc.type = "sine";
-      birdGain.gain.setValueAtTime(0.05, ctx.currentTime);
-      birdGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-      osc.connect(birdGain).connect(gainNode);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.15);
-    }, 500 + Math.random() * 2000);
+      const chirpCount = 1 + Math.floor(Math.random() * 3);
+      const baseFreq = 1800 + Math.random() * 2200;
+
+      for (let i = 0; i < chirpCount; i++) {
+        const startAt = ctx.currentTime + i * (0.045 + Math.random() * 0.04);
+        const osc = ctx.createOscillator();
+        const birdGain = ctx.createGain();
+        const pan = ctx.createStereoPanner();
+        osc.type = Math.random() > 0.5 ? "sine" : "triangle";
+        osc.frequency.setValueAtTime(baseFreq * (0.92 + Math.random() * 0.25), startAt);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq * (1.15 + Math.random() * 0.35), startAt + 0.03);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq * (0.86 + Math.random() * 0.2), startAt + 0.09);
+        birdGain.gain.setValueAtTime(0.0001, startAt);
+        birdGain.gain.exponentialRampToValueAtTime(0.03 + Math.random() * 0.03, startAt + 0.02);
+        birdGain.gain.exponentialRampToValueAtTime(0.001, startAt + 0.11);
+        pan.pan.value = Math.random() * 1.4 - 0.7;
+        osc.connect(birdGain).connect(pan).connect(gainNode);
+        osc.start(startAt);
+        osc.stop(startAt + 0.13);
+      }
+    }, 700 + Math.random() * 2600);
     cleanups.push(() => clearInterval(chirpInterval));
 
     const buffer = createNoiseBuffer(ctx, "pink");
@@ -188,16 +216,21 @@ function createSoundLayer(
 
     const crackleInterval = setInterval(() => {
       if (ctx.state !== "running") return;
-      const osc = ctx.createOscillator();
+      const clickBuffer = createNoiseBuffer(ctx, "white", 0.08);
+      const clickSource = ctx.createBufferSource();
+      clickSource.buffer = clickBuffer;
       const crackleGain = ctx.createGain();
-      osc.frequency.value = 1000 + Math.random() * 4000;
-      osc.type = "sawtooth";
-      crackleGain.gain.setValueAtTime(0.03, ctx.currentTime);
-      crackleGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
-      osc.connect(crackleGain).connect(gainNode);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.05);
-    }, 100 + Math.random() * 200);
+      const crackleBand = ctx.createBiquadFilter();
+      crackleBand.type = "bandpass";
+      crackleBand.frequency.value = 1800 + Math.random() * 2200;
+      crackleBand.Q.value = 1.4;
+      crackleGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      crackleGain.gain.exponentialRampToValueAtTime(0.02 + Math.random() * 0.03, ctx.currentTime + 0.008);
+      crackleGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+      clickSource.connect(crackleBand).connect(crackleGain).connect(gainNode);
+      clickSource.start();
+      clickSource.stop(ctx.currentTime + 0.08);
+    }, 70 + Math.random() * 140);
 
     source.connect(bandpass).connect(gainNode);
     source.start();
@@ -219,16 +252,20 @@ function createSoundLayer(
 
     const clinkInterval = setInterval(() => {
       if (ctx.state !== "running") return;
+      // 轻微人声起伏（模拟谈话群体的音量呼吸）
+      murmurGain.gain.setTargetAtTime(0.28 + Math.random() * 0.2, ctx.currentTime, 0.6);
+
       const osc = ctx.createOscillator();
       const clinkGain = ctx.createGain();
       osc.frequency.value = 3000 + Math.random() * 2000;
       osc.type = "sine";
-      clinkGain.gain.setValueAtTime(0.04, ctx.currentTime);
-      clinkGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+      clinkGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      clinkGain.gain.exponentialRampToValueAtTime(0.03 + Math.random() * 0.03, ctx.currentTime + 0.015);
+      clinkGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
       osc.connect(clinkGain).connect(gainNode);
       osc.start();
-      osc.stop(ctx.currentTime + 0.08);
-    }, 2000 + Math.random() * 5000);
+      osc.stop(ctx.currentTime + 0.14);
+    }, 1600 + Math.random() * 4200);
     cleanups.push(() => clearInterval(clinkInterval));
   } else if (type === "library") {
     const buffer = createNoiseBuffer(ctx, "white");
