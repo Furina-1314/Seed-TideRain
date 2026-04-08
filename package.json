@@ -34,6 +34,12 @@
       "electron/**/*",
       "package.json"
     ],
+    "extraFiles": [
+      {
+        "from": ".env.example",
+        "to": ".env.example"
+      }
+    ],
 
     "win": {
       "target": [

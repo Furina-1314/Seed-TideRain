@@ -521,7 +521,7 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
                 <label className="text-xs text-gray-600 mb-1 block">Gemini API Key（仅环境变量）</label>
                 <p className="text-xs text-gray-500 mt-1">
                   {geminiApiStatus === "configured" && <>当前状态：已配置。</>}
-                  {geminiApiStatus === "missing" && <>当前状态：未配置。请在服务端或 Electron 的 <code>.env</code>（或运行环境变量）中设置 <code>GEMINI_API_KEY</code>。</>}
+                  {geminiApiStatus === "missing" && <>当前状态：未配置。请在服务端的 <code>.env</code>（或运行环境变量）中设置 <code>GEMINI_API_KEY</code>。</>}
                   {geminiApiStatus === "unavailable" && <>当前状态：无法检测。当前运行环境没有连到服务端或 Electron AI 接口；如果你现在是用 <code>npm run dev</code> 启动的纯前端开发模式，这是正常现象。</>}
                 </p>
               </div>
