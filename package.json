@@ -1,6 +1,6 @@
 {
   "name": "seed-tiderain",
-  "version": "1.0.1",
+  "version": "1.2.0",
   "type": "module",
   "main": "electron/main.mjs",
   "license": "MIT",
@@ -33,6 +33,12 @@
       "dist/public/**/*",
       "electron/**/*",
       "package.json"
+    ],
+    "extraFiles": [
+      {
+        "from": ".env.example",
+        "to": ".env.example"
+      }
     ],
 
     "win": {

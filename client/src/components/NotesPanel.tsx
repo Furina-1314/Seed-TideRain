@@ -122,10 +122,6 @@ export default function NotesPanel() {
   };
 
   const handleAiBatchImport = async () => {
-    if (!state.geminiApiKey.trim()) {
-      alert("请先到个人中心设置 Gemini API Key。");
-      return;
-    }
     if (!aiRawText.trim()) {
       alert("请先粘贴群聊聊天记录文本。");
       return;
@@ -134,7 +130,6 @@ export default function NotesPanel() {
     setAiImporting(true);
     try {
       const todos = await generateTodosByGemini({
-        apiKey: state.geminiApiKey,
         model: aiModel,
         rawText: aiRawText,
       });
