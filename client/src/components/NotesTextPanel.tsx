@@ -23,6 +23,7 @@ export default function NotesTextPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState("");
   const addFormRef = useRef<HTMLDivElement>(null);
+  const totalCount = state.notes.length;
 
   // 删除确认
   const { requestDelete, confirmDelete, cancelDelete, isConfirming } = useDeleteConfirm({
@@ -77,7 +78,7 @@ export default function NotesTextPanel() {
           </div>
           <div>
             <h3 className="text-sm font-semibold text-gray-800">笔记</h3>
-            <p className="text-[10px] text-gray-500">{state.notes.length} 条记录</p>
+            <p className="text-[10px] text-gray-500">{totalCount} 条记录</p>
           </div>
         </div>
         <button onClick={() => setIsAdding(true)} className="p-2 rounded-xl bg-indigo-100 text-indigo-600 hover:bg-indigo-200 transition-colors">
@@ -124,11 +125,8 @@ export default function NotesTextPanel() {
               ) : (
                 <>
                   <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{note.content}</p>
-                  <div className="mt-1.5">
-                    <span className="text-[10px] text-gray-400">创建于 {formatDateTime(note.createdAt)}</span>
-                  </div>
-                  <div className="flex items-center justify-between mt-2 gap-2">
-                    <span className="text-[10px] text-gray-400 flex items-center gap-1"><StickyNote size={11} />拖到主界面生成便利贴</span>
+                  <div className="flex items-center justify-between mt-2 gap-2 text-[10px] text-gray-400">
+                    <span>创建于 {formatDateTime(note.createdAt)}</span>
                     <div className="flex items-center gap-1 shrink-0">
                       <button onClick={() => startEdit(note)} className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"><Edit2 size={14} /></button>
                       {isConfirming(note.id) ? (
@@ -147,6 +145,12 @@ export default function NotesTextPanel() {
           ))
         )}
       </div>
+
+        {totalCount > 0 && (
+        <p className="text-[10px] text-gray-400 text-center mt-2 shrink-0 flex items-center justify-center gap-1">
+        <StickyNote size={11} />拖到主界面生成便利贴
+        </p>
+      )}
     </div>
   );
 }
