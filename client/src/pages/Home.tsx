@@ -326,8 +326,8 @@ export default function Home() {
     let randomId = Math.floor(Math.random() * maxId) + 1;
     let selected = pool.find((item) => item.id === randomId);
 
-    // 处理 id 不连续场景：最多重试 12 次，仍失败则回退到第 1 条
-    for (let attempt = 0; !selected && attempt < 12; attempt++) {
+    // 处理 id 不连续场景：最多重试 100 次，仍失败则回退到第 1 条
+    for (let attempt = 0; !selected && attempt < 100; attempt++) {
       randomId = Math.floor(Math.random() * maxId) + 1;
       selected = pool.find((item) => item.id === randomId);
     }
