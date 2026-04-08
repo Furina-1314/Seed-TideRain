@@ -276,7 +276,7 @@ export default function NotesPanel() {
             onClick={() => setShowAiImportDialog(true)}
             className="px-3 py-1 rounded-xl transition-colors whitespace-nowrap text-[11px] font-medium h-6 flex items-center bg-violet-100 text-violet-700 hover:bg-violet-200"
           >
-            AI 辅助批量导入待办
+            AI 辅助导入
           </button>
           <button 
             onClick={() => dispatch({ type: "SET_SHOW_DONE_MEMOS", payload: !state.showDoneMemos })} 
@@ -507,9 +507,10 @@ export default function NotesPanel() {
       <Dialog open={showAiImportDialog} onOpenChange={setShowAiImportDialog}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>AI 辅助批量导入待办</DialogTitle>
+            <DialogTitle>AI 辅助导入</DialogTitle>
             <DialogDescription>
-              粘贴群聊聊天记录文本后，系统会调用 Gemini 自动抽取待办并写入列表。
+              粘贴群聊聊天记录文本后，系统会调用 Gemini 自动识别待办并写入列表。
+              <br></br>请先在个人中心输入您的 Gemini API Key。
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">

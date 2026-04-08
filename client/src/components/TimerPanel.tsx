@@ -267,14 +267,22 @@ export default function TimerPanel({ compact = false }: TimerPanelProps) {
               </button>
             </TooltipTrigger>
             <TooltipContent side="top" sideOffset={8}>
-              {isSkipLocked ? "跳过键已锁定" : mode === "focus" ? "快进当前番茄" : "结束休息"}
+              {isSkipLocked ? "跳过键已锁定" : mode === "focus" ? "快进" : "结束休息"}
             </TooltipContent>
           </Tooltip>
         ) : null}
         
-        <button onClick={isRunning ? pause : start} className={`relative z-30 w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 ${isRunning ? "bg-amber-400 hover:bg-amber-500 text-white" : mode === "focus" ? "bg-emerald-500 hover:bg-emerald-600 text-white" : "bg-amber-500 hover:bg-amber-600 text-white"}`}>
-          {isRunning ? <Pause size={32} /> : <Play size={32} className="ml-1" />}
-        </button>
+        { 
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button onClick={isRunning ? pause : start} className={`relative z-30 w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 ${isRunning ? "bg-amber-400 hover:bg-amber-500 text-white" : mode === "focus" ? "bg-emerald-500 hover:bg-emerald-600 text-white" : "bg-amber-500 hover:bg-amber-600 text-white"}`}>
+              {isRunning ? <Pause size={32} /> : <Play size={32} className="ml-1" />}
+              </button>
+          </TooltipTrigger>
+               <TooltipContent side="top" sideOffset={8}>
+                { isRunning? "暂停" : "继续"}
+            </TooltipContent>
+          </Tooltip>}
 
         {hasRoundStarted ? (
           <Tooltip>
@@ -288,7 +296,7 @@ export default function TimerPanel({ compact = false }: TimerPanelProps) {
               </button>
             </TooltipTrigger>
             <TooltipContent side="top" sideOffset={8}>
-              {isSkipLocked ? "结束键已锁定" : "结束本局并结算"}
+              {isSkipLocked ? "结束键已锁定" : "结束"}
             </TooltipContent>
           </Tooltip>
         ) : (
