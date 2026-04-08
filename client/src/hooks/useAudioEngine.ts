@@ -111,7 +111,7 @@ function createSoundLayer(
     source.start();
     cleanups.push(() => { try { source.stop(); } catch {} });
 
-    const thunderInterval = setInterval(() => {
+    const triggerThunder = () => {
       if (ctx.state !== "running") return;
       const thunderBuffer = createNoiseBuffer(ctx, "brown", 3);
       const thunderSource = ctx.createBufferSource();
@@ -124,7 +124,7 @@ function createSoundLayer(
       const attack = 0.12 + Math.random() * 0.2;
       const release = 2.2 + Math.random() * 1.8;
       thunderGain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      thunderGain.gain.exponentialRampToValueAtTime(0.38 + Math.random() * 0.2, ctx.currentTime + rumbleDelay + attack);
+      thunderGain.gain.exponentialRampToValueAtTime(0.58 + Math.random() * 0.28, ctx.currentTime + rumbleDelay + attack);
       thunderGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + rumbleDelay + release);
       thunderSource.connect(lowpass).connect(thunderGain).connect(gainNode);
       thunderSource.start();
@@ -141,7 +141,7 @@ function createSoundLayer(
       crack.frequency.setValueAtTime(crackFreq, ctx.currentTime);
       crack.frequency.exponentialRampToValueAtTime(crackFreq * (1.6 + Math.random() * 0.7), ctx.currentTime + 0.06);
       crackGain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      crackGain.gain.exponentialRampToValueAtTime(0.15 + Math.random() * 0.1, ctx.currentTime + 0.02);
+      crackGain.gain.exponentialRampToValueAtTime(0.26 + Math.random() * 0.16, ctx.currentTime + 0.02);
       crackGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.14);
       crack.connect(crackFilter).connect(crackGain).connect(gainNode);
       crack.start();
@@ -157,12 +157,17 @@ function createSoundLayer(
       echoLowpass.frequency.value = 180;
       const echoStart = ctx.currentTime + 0.35 + Math.random() * 0.8;
       echoGain.gain.setValueAtTime(0.0001, echoStart);
-      echoGain.gain.exponentialRampToValueAtTime(0.18 + Math.random() * 0.12, echoStart + 0.2);
+      echoGain.gain.exponentialRampToValueAtTime(0.3 + Math.random() * 0.18, echoStart + 0.2);
       echoGain.gain.exponentialRampToValueAtTime(0.001, echoStart + 1.4);
       echoSource.connect(echoLowpass).connect(echoGain).connect(gainNode);
       echoSource.start(echoStart);
       echoSource.stop(echoStart + 1.5);
-    }, 8000 + Math.random() * 15000);
+    };
+
+    // 启动后快速触发一次，避免长时间听不到雷声
+    const initialThunderTimeout = setTimeout(triggerThunder, 600 + Math.random() * 1200);
+    const thunderInterval = setInterval(triggerThunder, 5000 + Math.random() * 9000);
+    cleanups.push(() => clearTimeout(initialThunderTimeout));
     cleanups.push(() => clearInterval(thunderInterval));
   } else if (type === "ocean") {
     const buffer = createNoiseBuffer(ctx, "pink");
@@ -267,14 +272,14 @@ function createSoundLayer(
       crackleBand.frequency.value = 1800 + Math.random() * 2200;
       crackleBand.Q.value = 1.4;
       crackleGain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      crackleGain.gain.exponentialRampToValueAtTime(0.02 + Math.random() * 0.03, ctx.currentTime + 0.008);
+      crackleGain.gain.exponentialRampToValueAtTime(0.04 + Math.random() * 0.05, ctx.currentTime + 0.008);
       crackleGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
       clickSource.connect(crackleBand).connect(crackleGain).connect(gainNode);
       clickSource.start();
       clickSource.stop(ctx.currentTime + 0.08);
 
       // 偶发的大木柴爆裂
-      if (Math.random() < 0.22) {
+      if (Math.random() < 0.35) {
         const logBurst = createNoiseBuffer(ctx, "brown", 0.15);
         const burstSource = ctx.createBufferSource();
         burstSource.buffer = logBurst;
@@ -283,13 +288,13 @@ function createSoundLayer(
         burstLowpass.type = "lowpass";
         burstLowpass.frequency.value = 900 + Math.random() * 500;
         burstGain.gain.setValueAtTime(0.0001, ctx.currentTime);
-        burstGain.gain.exponentialRampToValueAtTime(0.03 + Math.random() * 0.03, ctx.currentTime + 0.02);
+        burstGain.gain.exponentialRampToValueAtTime(0.06 + Math.random() * 0.06, ctx.currentTime + 0.02);
         burstGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.16);
         burstSource.connect(burstLowpass).connect(burstGain).connect(gainNode);
         burstSource.start();
         burstSource.stop(ctx.currentTime + 0.18);
       }
-    }, 70 + Math.random() * 140);
+    }, 35 + Math.random() * 85);
 
     source.connect(bandpass).connect(gainNode);
     source.start();
@@ -304,7 +309,7 @@ function createSoundLayer(
     lowpass.type = "lowpass";
     lowpass.frequency.value = 2000;
     const murmurGain = ctx.createGain();
-    murmurGain.gain.value = 0.4;
+    murmurGain.gain.value = 0.5;
     source.connect(lowpass).connect(murmurGain).connect(gainNode);
     source.start();
     cleanups.push(() => { try { source.stop(); } catch {} });
@@ -321,51 +326,62 @@ function createSoundLayer(
       formant.Q.value = 0.8;
       const chatterGain = ctx.createGain();
       chatterGain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      chatterGain.gain.exponentialRampToValueAtTime(0.03 + Math.random() * 0.04, ctx.currentTime + 0.03);
+      chatterGain.gain.exponentialRampToValueAtTime(0.05 + Math.random() * 0.05, ctx.currentTime + 0.03);
       chatterGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
       chatterSource.connect(formant).connect(chatterGain).connect(gainNode);
       chatterSource.start();
       chatterSource.stop(ctx.currentTime + 0.2);
-    }, 220 + Math.random() * 480);
+    }, 140 + Math.random() * 320);
     cleanups.push(() => clearInterval(chatterInterval));
 
-    const clinkInterval = setInterval(() => {
+    // 街道环境：车辆引擎低频掠过 + 偶发喇叭
+    const trafficInterval = setInterval(() => {
       if (ctx.state !== "running") return;
       // 轻微人声起伏（模拟谈话群体的音量呼吸）
-      murmurGain.gain.setTargetAtTime(0.28 + Math.random() * 0.2, ctx.currentTime, 0.6);
+      murmurGain.gain.setTargetAtTime(0.42 + Math.random() * 0.24, ctx.currentTime, 0.45);
 
-      const clinkCount = 1 + Math.floor(Math.random() * 2);
-      for (let i = 0; i < clinkCount; i++) {
-        const startAt = ctx.currentTime + i * 0.03;
-        const osc = ctx.createOscillator();
-        const overtone = ctx.createOscillator();
-        const clinkGain = ctx.createGain();
-        const clinkHighpass = ctx.createBiquadFilter();
-        clinkHighpass.type = "highpass";
-        clinkHighpass.frequency.value = 2200;
-        osc.frequency.value = 2300 + Math.random() * 1700;
-        overtone.frequency.value = osc.frequency.value * (1.45 + Math.random() * 0.4);
-        osc.type = "triangle";
-        overtone.type = "sine";
-        clinkGain.gain.setValueAtTime(0.0001, startAt);
-        clinkGain.gain.exponentialRampToValueAtTime(0.025 + Math.random() * 0.028, startAt + 0.01);
-        clinkGain.gain.exponentialRampToValueAtTime(0.001, startAt + 0.2);
-        osc.connect(clinkHighpass).connect(clinkGain).connect(gainNode);
-        overtone.connect(clinkHighpass);
-        osc.start(startAt);
-        overtone.start(startAt);
-        osc.stop(startAt + 0.2);
-        overtone.stop(startAt + 0.18);
+      const engineBuffer = createNoiseBuffer(ctx, "brown", 0.8);
+      const engineSource = ctx.createBufferSource();
+      engineSource.buffer = engineBuffer;
+      const engineBand = ctx.createBiquadFilter();
+      engineBand.type = "bandpass";
+      engineBand.frequency.value = 120 + Math.random() * 160;
+      engineBand.Q.value = 0.9;
+      const engineGain = ctx.createGain();
+      engineGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      engineGain.gain.exponentialRampToValueAtTime(0.05 + Math.random() * 0.05, ctx.currentTime + 0.25);
+      engineGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+      engineSource.connect(engineBand).connect(engineGain).connect(gainNode);
+      engineSource.start();
+      engineSource.stop(ctx.currentTime + 0.8);
+
+      if (Math.random() < 0.4) {
+        const horn = ctx.createOscillator();
+        const hornGain = ctx.createGain();
+        const hornFilter = ctx.createBiquadFilter();
+        hornFilter.type = "bandpass";
+        hornFilter.frequency.value = 500 + Math.random() * 350;
+        hornFilter.Q.value = 1.1;
+        const hornStart = ctx.currentTime + 0.1 + Math.random() * 0.25;
+        horn.type = "sawtooth";
+        horn.frequency.setValueAtTime(390 + Math.random() * 120, hornStart);
+        horn.frequency.linearRampToValueAtTime(430 + Math.random() * 140, hornStart + 0.06);
+        hornGain.gain.setValueAtTime(0.0001, hornStart);
+        hornGain.gain.exponentialRampToValueAtTime(0.03 + Math.random() * 0.03, hornStart + 0.03);
+        hornGain.gain.exponentialRampToValueAtTime(0.001, hornStart + 0.2);
+        horn.connect(hornFilter).connect(hornGain).connect(gainNode);
+        horn.start(hornStart);
+        horn.stop(hornStart + 0.22);
       }
-    }, 1300 + Math.random() * 3400);
-    cleanups.push(() => clearInterval(clinkInterval));
+    }, 900 + Math.random() * 1800);
+    cleanups.push(() => clearInterval(trafficInterval));
   } else if (type === "library") {
     const buffer = createNoiseBuffer(ctx, "pink");
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     source.loop = true;
     const quietGain = ctx.createGain();
-    quietGain.gain.value = 0.05;
+    quietGain.gain.value = 0.09;
     const lowpass = ctx.createBiquadFilter();
     lowpass.type = "lowpass";
     lowpass.frequency.value = 1800;
@@ -385,12 +401,12 @@ function createSoundLayer(
       whisperFilter.Q.value = 1.2;
       const whisperGain = ctx.createGain();
       whisperGain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      whisperGain.gain.exponentialRampToValueAtTime(0.008 + Math.random() * 0.008, ctx.currentTime + 0.05);
-      whisperGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.24);
+      whisperGain.gain.exponentialRampToValueAtTime(0.02 + Math.random() * 0.015, ctx.currentTime + 0.05);
+      whisperGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
       whisperSource.connect(whisperFilter).connect(whisperGain).connect(gainNode);
       whisperSource.start();
-      whisperSource.stop(ctx.currentTime + 0.24);
-    }, 600 + Math.random() * 1500);
+      whisperSource.stop(ctx.currentTime + 0.3);
+    }, 320 + Math.random() * 900);
     cleanups.push(() => clearInterval(whisperInterval));
 
     const pageInterval = setInterval(() => {
@@ -406,13 +422,13 @@ function createSoundLayer(
       lowpass.type = "lowpass";
       lowpass.frequency.value = 5200;
       pageGain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      pageGain.gain.exponentialRampToValueAtTime(0.03 + Math.random() * 0.03, ctx.currentTime + 0.08);
-      pageGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+      pageGain.gain.exponentialRampToValueAtTime(0.06 + Math.random() * 0.05, ctx.currentTime + 0.08);
+      pageGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.42);
       pageSource.connect(highpass).connect(pageGain).connect(gainNode);
       pageSource.connect(lowpass).connect(pageGain);
       pageSource.start();
-      pageSource.stop(ctx.currentTime + 0.35);
-    }, 3200 + Math.random() * 6800);
+      pageSource.stop(ctx.currentTime + 0.42);
+    }, 1700 + Math.random() * 3200);
     cleanups.push(() => clearInterval(pageInterval));
   } else if (type === "night") {
     const cricketInterval = setInterval(() => {

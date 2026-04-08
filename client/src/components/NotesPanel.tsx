@@ -2,7 +2,7 @@
 import { useGame, type MemoEntry } from "@/contexts/GameContext";
 import { useState, useEffect, useRef } from "react";
 import { useDeleteConfirm } from "@/hooks/useDeleteConfirm";
-import { Plus, Trash2, Lightbulb, Check, Edit2, Search, X, Tag, BellRing } from "lucide-react";
+import { Plus, Trash2, Lightbulb, Check, Edit2, Search, X, Tag, BellRing , Sparkles} from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { GEMINI_MODELS, generateTodosByGemini } from "@/lib/todoAi";
 
@@ -271,7 +271,7 @@ export default function NotesPanel() {
             onClick={() => setShowAiImportDialog(true)}
             className="px-3 py-1 rounded-xl transition-colors whitespace-nowrap text-[11px] font-medium h-6 flex items-center bg-violet-100 text-violet-700 hover:bg-violet-200"
           >
-            AI 辅助批量导入待办
+            <Sparkles size={12} />   AI辅助导入
           </button>
           <button 
             onClick={() => dispatch({ type: "SET_SHOW_DONE_MEMOS", payload: !state.showDoneMemos })} 
@@ -502,9 +502,10 @@ export default function NotesPanel() {
       <Dialog open={showAiImportDialog} onOpenChange={setShowAiImportDialog}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>AI 辅助批量导入待办</DialogTitle>
+            <DialogTitle>AI 辅助导入</DialogTitle>
             <DialogDescription>
-              粘贴群聊聊天记录文本后，系统会调用 Gemini 自动抽取待办并写入列表。
+              粘贴群聊聊天记录文本后，系统会调用 Gemini 自动识别待办并写入列表。
+              <br></br>请先在个人中心设置您的 Gemini API Key。
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
