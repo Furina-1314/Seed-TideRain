@@ -10,6 +10,8 @@ import {
   AlertCircle, RefreshCw
 } from "lucide-react";
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useDeleteConfirm } from "@/hooks/useDeleteConfirm";
+import { X } from "lucide-react";
 
 type Mode = "scenes" | "mixer" | "music";
 
@@ -75,6 +77,10 @@ interface MusicTrackItemProps {
   duration?: number;
   onSelect: () => void;
   onDelete: () => void;
+  onRequestDelete: () => void;
+  onConfirmDelete: () => void;
+  onCancelDelete: () => void;
+  isConfirmingDelete: boolean;
   onReupload: () => void;
   onDragStart: (e: React.DragEvent, index: number) => void;
   onDragOver: (e: React.DragEvent, index: number) => void;
@@ -91,6 +97,10 @@ function MusicTrackItem({
   duration = 0,
   onSelect,
   onDelete,
+  onRequestDelete,
+  onConfirmDelete,
+  onCancelDelete,
+  isConfirmingDelete,
   onReupload,
   onDragStart,
   onDragOver,
@@ -161,20 +171,27 @@ function MusicTrackItem({
           </div>
         </div>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
-            >
-              <Trash2 size={12} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top" sideOffset={6}>删除</TooltipContent>
-        </Tooltip>
+        {isConfirmingDelete ? (
+          <div className="flex items-center gap-0.5 shrink-0">
+            <button onClick={onConfirmDelete} className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] text-red-500 hover:bg-red-50"><span>确定</span><Trash2 size={12} /></button>
+            <button onClick={onCancelDelete} className="p-1 rounded text-gray-400 hover:bg-gray-100"><X size={12} /></button>
+          </div>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRequestDelete();
+                }}
+                className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded"
+              >
+                <Trash2 size={12} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={6}>删除</TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
       {isCurrent && onSeek && (
@@ -347,6 +364,10 @@ function EmptyMusicState({ onUpload }: { onUpload: () => void }) {
 
 export default function SoundPanel() {
   const { state, dispatch } = useGame();
+  const { requestDelete, confirmDelete, cancelDelete, isConfirming } = useDeleteConfirm({
+    onDelete: (id) => void handleDeleteTrack(id),
+    confirmText: "确定删除这首音乐？",
+  });
   const { 
     togglePlay, 
     playNext, 
@@ -960,6 +981,10 @@ export default function SoundPanel() {
                       duration={displayDuration}
                       onSelect={() => handlePlayMusic(track.id)}
                       onDelete={() => void handleDeleteTrack(track.id)}
+                      onRequestDelete={() => requestDelete(track.id)}
+                      onConfirmDelete={confirmDelete}
+                      onCancelDelete={cancelDelete}
+                      isConfirmingDelete={isConfirming(track.id)}
                       onReupload={() => setReuploadTrack(track)}
                       onDragStart={handleDragStart}
                       onDragOver={handleDragOver}
