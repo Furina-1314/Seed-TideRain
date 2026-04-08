@@ -276,8 +276,7 @@ export default function HabitsPanel() {
               </div>
               {isConfirming(habit.id) ? (
                 <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-[10px] text-gray-500">确定？</span>
-                  <button onClick={confirmDelete} className="p-1 rounded text-red-500 hover:bg-red-50"><Trash2 size={12} /></button>
+                  <button onClick={confirmDelete} className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] text-red-500 hover:bg-red-50"><span>确定</span><Trash2 size={12} /></button>
                   <button onClick={cancelDelete} className="p-1 rounded text-gray-400 hover:bg-gray-100"><X size={12} /></button>
                 </div>
               ) : (
