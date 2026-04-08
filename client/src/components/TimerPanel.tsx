@@ -109,7 +109,8 @@ export default function TimerPanel({ compact = false }: TimerPanelProps) {
   const [showHistory, setShowHistory] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showCycleEndCelebration, setShowCycleEndCelebration] = useState(false);
-  const lastCycleMarkRef = useRef(state.lastCycleCompletionMark);
+  const lastCycleMarkRef = useRef<number | null>(null);
+  const hasHydratedCycleMarkRef = useRef(false);
   const [customPomodoro, setCustomPomodoro] = useState(String(state.pomodoroMinutes));
   const [customBreak, setCustomBreak] = useState(String(state.breakMinutes));
   const [customCycles, setCustomCycles] = useState(String(state.pomodoroCycles));
@@ -126,7 +127,15 @@ export default function TimerPanel({ compact = false }: TimerPanelProps) {
 
   useEffect(() => {
     if (!state.lastCycleCompletionMark) return;
-    if (state.lastCycleCompletionMark > lastCycleMarkRef.current) {
+
+    // 首次读取（含本地存档恢复）仅同步基准，不触发庆祝提示
+    if (!hasHydratedCycleMarkRef.current) {
+      hasHydratedCycleMarkRef.current = true;
+      lastCycleMarkRef.current = state.lastCycleCompletionMark;
+      return;
+    }
+
+    if ((lastCycleMarkRef.current ?? 0) > 0 && state.lastCycleCompletionMark > (lastCycleMarkRef.current ?? 0)) {
       setShowCycleEndCelebration(true);
     }
     lastCycleMarkRef.current = state.lastCycleCompletionMark;
