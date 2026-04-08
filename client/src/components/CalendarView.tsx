@@ -145,7 +145,7 @@ export default function CalendarView({ onClose }: CalendarViewProps) {
           <div className="p-5 flex flex-col">
             <div className="flex items-center gap-2 mb-2">
               <BookText size={16} className="text-indigo-500" />
-              <h3 className="text-sm font-semibold text-gray-800">日历日记</h3>
+              <h3 className="text-sm font-semibold text-gray-800">日记</h3>
             </div>
             <p className="text-xs text-gray-500 mb-2 shrink-0">{selectedDate} 星期{['日','一','二','三','四','五','六'][new Date(selectedDate).getDay()]}</p>
             <textarea
