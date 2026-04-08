@@ -28,8 +28,7 @@ const TODO_EXTRACTION_PROMPT = `你是“待办提取助手”。
 3) 若没有明确截止时间，dueDate 设为 null。
 4) 只保留真正需要执行的事项，不要输出解释。`;
 
-function readGeminiApiKeyFromDotenv() {
-  const envPath = path.resolve(process.cwd(), ".env");
+function readGeminiApiKeyFromEnvFile(envPath) {
   if (!fs.existsSync(envPath)) return "";
   const content = fs.readFileSync(envPath, "utf-8");
   for (const line of content.split("\n")) {
@@ -42,7 +41,30 @@ function readGeminiApiKeyFromDotenv() {
   return "";
 }
 
-const geminiApiKey = (process.env.GEMINI_API_KEY || readGeminiApiKeyFromDotenv() || "").trim();
+function getGeminiApiKey() {
+  const directEnv = (process.env.GEMINI_API_KEY || "").trim();
+  if (directEnv) return directEnv;
+
+  const envCandidates = [
+    path.resolve(process.cwd(), ".env"),
+    path.resolve(__dirname, "..", ".env"),
+  ];
+
+  if (app.isPackaged) {
+    envCandidates.unshift(path.resolve(path.dirname(process.execPath), ".env"));
+  }
+
+  if (app.isReady()) {
+    envCandidates.unshift(path.resolve(app.getPath("userData"), ".env"));
+  }
+
+  for (const envPath of envCandidates) {
+    const value = readGeminiApiKeyFromEnvFile(envPath).trim();
+    if (value) return value;
+  }
+
+  return "";
+}
 
 function normalizeDueDate(input) {
   if (typeof input !== "string" || !input.trim()) return undefined;
@@ -117,7 +139,7 @@ function createWindow() {
     autoHideMenuBar: true,
     backgroundColor: "#0f172a",
     webPreferences: {
-      preload: path.join(__dirname, "preload.mjs"),
+      preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -137,10 +159,11 @@ function createWindow() {
   });
 }
 
-ipcMain.handle("ai:config:get", async () => ({ hasKey: Boolean(geminiApiKey) }));
+ipcMain.handle("ai:config:get", async () => ({ hasKey: Boolean(getGeminiApiKey()) }));
 ipcMain.handle("ai:todos:generate", async (_event, payload) => {
   const model = typeof payload?.model === "string" ? payload.model.trim() : "";
   const rawText = typeof payload?.rawText === "string" ? payload.rawText.trim() : "";
+  const geminiApiKey = getGeminiApiKey();
 
   if (!geminiApiKey) throw new Error("请先在启动应用前配置 GEMINI_API_KEY 环境变量。");
   if (!model || !rawText) throw new Error("模型和文本内容不能为空。");

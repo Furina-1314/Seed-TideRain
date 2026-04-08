@@ -126,7 +126,7 @@ npm run format
 关键文件：
 
 - `electron/main.mjs`：创建窗口，开发态加载 `http://127.0.0.1:3000`，生产态加载 `dist/public/index.html`
-- `electron/preload.mjs`：向渲染进程暴露最小桥接对象
+- `electron/preload.cjs`：向渲染进程暴露最小桥接对象
 
 配套要点：
 

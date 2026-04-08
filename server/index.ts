@@ -26,8 +26,7 @@ const TODO_EXTRACTION_PROMPT = `你是“待办提取助手”。
 3) 若没有明确截止时间，dueDate 设为 null。
 4) 只保留真正需要执行的事项，不要输出解释。`;
 
-function readGeminiApiKeyFromDotenv(): string {
-  const envPath = path.resolve(process.cwd(), ".env");
+function readGeminiApiKeyFromEnvFile(envPath: string): string {
   if (!fs.existsSync(envPath)) return "";
   const content = fs.readFileSync(envPath, "utf-8");
   for (const line of content.split("\n")) {
@@ -40,7 +39,22 @@ function readGeminiApiKeyFromDotenv(): string {
   return "";
 }
 
-const geminiApiKey = (process.env.GEMINI_API_KEY || readGeminiApiKeyFromDotenv() || "").trim();
+function getGeminiApiKey(): string {
+  const directEnv = (process.env.GEMINI_API_KEY || "").trim();
+  if (directEnv) return directEnv;
+
+  const envCandidates = [
+    path.resolve(process.cwd(), ".env"),
+    path.resolve(__dirname, "..", ".env"),
+  ];
+
+  for (const envPath of envCandidates) {
+    const value = readGeminiApiKeyFromEnvFile(envPath).trim();
+    if (value) return value;
+  }
+
+  return "";
+}
 
 function normalizeDueDate(input: unknown): string | undefined {
   if (typeof input !== "string" || !input.trim()) return undefined;
@@ -121,13 +135,14 @@ async function startServer() {
   app.use(express.json({ limit: "1mb" }));
 
   app.get("/api/ai/config", (_req, res) => {
-    res.json({ hasKey: Boolean(geminiApiKey) });
+    res.json({ hasKey: Boolean(getGeminiApiKey()) });
   });
 
   app.post("/api/ai/todos", async (req, res) => {
     try {
       const model = typeof req.body?.model === "string" ? req.body.model.trim() : "";
       const rawText = typeof req.body?.rawText === "string" ? req.body.rawText.trim() : "";
+      const geminiApiKey = getGeminiApiKey();
       if (!geminiApiKey) {
         res.status(400).json({ error: "请先在服务端 .env 或环境变量中配置 GEMINI_API_KEY。" });
         return;
