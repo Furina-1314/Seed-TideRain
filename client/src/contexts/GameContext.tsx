@@ -1,8 +1,6 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback, useRef, type ReactNode } from "react";
+import React, { createContext, useContext, useReducer, useEffect, useCallback, type ReactNode } from "react";
 import {
-  saveMusicFile,
   getMusicFileUrl,
-  deleteMusicFile,
   hasMusicFile,
   cleanupOrphanedFiles,
   getAllMusicFilesInfo,
@@ -147,11 +145,7 @@ export interface GameState {
   // Heatmap cache
   heatmapData: HeatmapDay[];
 
-  // Dialog
-  lastDialogShown: string | null;
-
   // UI
-  activePanel: string | null;
   customBackground: string | null;
 }
 
@@ -292,34 +286,8 @@ export const DIALOG_MESSAGES: DialogMessage[] = [
   { id: "m15", text: "这一刻值得纪念，谢谢你一直以来的陪伴！", minAffection: 1000, type: "milestone" },
 ];
 
-// ============ Daily Quotes ============
-export const DAILY_QUOTES = [
-  { text: "学如逆水行舟，不进则退。", author: "《增广贤文》" },
-  { text: "千里之行，始于足下。", author: "老子" },
-  { text: "博学之，审问之，慎思之，明辨之，笃行之。", author: "《中庸》" },
-  { text: "不积跬步，无以至千里。", author: "荀子" },
-  { text: "业精于勤，荒于嬉。", author: "韩愈" },
-  { text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
-  { text: "Stay hungry, stay foolish.", author: "Steve Jobs" },
-  { text: "知之者不如好之者，好之者不如乐之者。", author: "孔子" },
-  { text: "读书破万卷，下笔如有神。", author: "杜甫" },
-  { text: "天才是百分之一的灵感加百分之九十九的汗水。", author: "爱迪生" },
-  { text: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius" },
-  { text: "路漫漫其修远兮，吾将上下而求索。", author: "屈原" },
-  { text: "宝剑锋从磨砺出，梅花香自苦寒来。", author: "《警世贤文》" },
-  { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
-  { text: "书山有路勤为径，学海无涯苦作舟。", author: "韩愈" },
-];
-
-export function getDailyQuote() {
-  const dayOfYear = Math.floor(
-    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
-  );
-  return DAILY_QUOTES[dayOfYear % DAILY_QUOTES.length];
-}
-
 // ============ Sound Scenes ============
-export interface SoundScene {
+interface SoundScene {
   id: string;
   name: string;
   icon: string;
@@ -441,7 +409,6 @@ type GameAction =
   | { type: "DELETE_HABIT"; payload: string }
   | { type: "UPDATE_HABIT"; payload: { id: string; name: string } }
   | { type: "SET_DIARY_ENTRY"; payload: { date: string; content: string } }
-  | { type: "SET_ACTIVE_PANEL"; payload: string | null }
   | { type: "SET_CUSTOM_BACKGROUND"; payload: string | null }
   | { type: "LOAD_STATE"; payload: Partial<GameState> }
   // Music actions
@@ -503,8 +470,6 @@ const initialState: GameState = {
   customBackground: null,
   sessions: [],
   heatmapData: [],
-  lastDialogShown: null,
-  activePanel: null,
 };
 
 // ============ Helper ============
@@ -918,9 +883,6 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case "SET_CUSTOM_BACKGROUND":
       return { ...state, customBackground: action.payload };
 
-    case "SET_ACTIVE_PANEL":
-      return { ...state, activePanel: state.activePanel === action.payload ? null : action.payload };
-
     // Music actions
     case "ADD_MUSIC_TRACK": {
       // Save to IndexedDB is handled by the component/hook
@@ -1247,9 +1209,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const timeout = setTimeout(() => {
       try {
-        const { isTimerRunning, activePanel, ...saveable } = state;
+        const { isTimerRunning, ...saveable } = state;
         void isTimerRunning;
-        void activePanel;
         localStorage.setItem("focus-companion-state", JSON.stringify(saveable));
       } catch (e) {
         console.warn("Failed to save state:", e);
