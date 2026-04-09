@@ -51,10 +51,18 @@ AI 辅助批量导入需要将 Gemini API Key 设置在本项目环境变量中�
 cp .env.example .env
 ```
 
-1. 修改 .env 文件，填入你的 GEMINI_API_KEY。
+2. 修改 .env 文件，填入你的 GEMINI_API_KEY。
 
 ```
 GEMINI_API_KEY=[Your_GEMINI_API_KEY]
+```
+
+如果需要配置你的代理，则修改：
+
+```
+HTTP_PROXY=http://127.0.0.1:[Proxy Port]
+HTTPS_PROXY=http://127.0.0.1:[Proxy Port]
+NODE_USE_ENV_PROXY=1
 ```
 
 ## 文档
