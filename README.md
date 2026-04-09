@@ -11,8 +11,10 @@
 - [汐得时雨 - Seed: TideRain](#汐得时雨---seed-tiderain)
   - [目录](#目录)
   - [核心功能](#核心功能)
-  - [快速安装](#快速安装)
-  - [开发文档](#开发文档)
+  - [快速开始](#快速开始)
+    - [安装](#安装)
+    - [配置](#配置)
+  - [文档](#文档)
   - [许可证](#许可证)
 
 ---
@@ -31,14 +33,36 @@
 
 可以 F11 全屏。
 
-## 快速安装
+## 快速开始
+
+### 安装
 
 可以在本项目 [Releases](https://github.com/Furina-1314/Seed-TideRain/releases) 中找到适合的安装包。
 
-## 开发文档
+运行 `Seed.TideRain.Setup.x.exe` 后根据向导安装即可。
 
-见 [开发文档](docs/Development.md)
+### 配置
+
+AI 辅助批量导入需要将 Gemini API Key 设置在本项目环境变量中，安装后在本项目目录下打开终端。
+
+1. 复制示例环境变量文件：
+
+```
+cp .env.example .env
+```
+
+1. 修改 .env 文件，填入你的 GEMINI_API_KEY。
+
+```
+GEMINI_API_KEY=[Your_GEMINI_API_KEY]
+```
+
+## 文档
+
+[开发文档](docs/Development.md)
 
 ## 许可证
 
-MIT
+本项目采用 the GNU General Public License v3.0 or later。
+
+详情见 [LICENSE](./LICENSE)。

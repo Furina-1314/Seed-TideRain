@@ -422,7 +422,7 @@ export default function Home() {
       },
       {
         title: "待办处理",
-        description: "切换到“待办”，创建、勾选与整理当天任务。",
+        description: "切换到“待办”，创建、勾选与整理当天任务。\n 可以选择 AI 辅助导入，需要本项目根目录下根据 .env.example 文件建立 .env 文件，编辑其中的内容来设置 Gemini API Key。",
         targetClassName: "top-[248px] right-[400px] max-w-sm",
         setup: () => setRightTab("todos"),
       },
