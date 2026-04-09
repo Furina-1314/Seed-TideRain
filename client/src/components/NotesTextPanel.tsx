@@ -105,8 +105,11 @@ export default function NotesTextPanel() {
 
       <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-0">
         {state.notes.length === 0 ? (
-          <div className="text-center py-8 text-gray-400 text-sm">还没有笔记，点击右上角新建</div>
-        ) : (
+          <div className="text-center py-8 text-gray-400">
+            <BookText size={32} className="mx-auto mb-2 opacity-30" />
+            <p className="text-sm">还没有笔记，点击右上角新建</p>
+          </div>
+         ) : (
           state.notes.map((note) => (
             <div key={note.id} className="bg-gray-50 rounded-xl p-3" draggable={editingId !== note.id} onDragStart={(e) => handleDragStart(e, note)}>
               {editingId === note.id ? (

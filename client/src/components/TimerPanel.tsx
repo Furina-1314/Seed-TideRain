@@ -280,7 +280,7 @@ export default function TimerPanel({ compact = false }: TimerPanelProps) {
               </button>
           </TooltipTrigger>
                <TooltipContent side="top" sideOffset={8}>
-                { isRunning? "暂停" : "继续"}
+                { isRunning? "暂停" :hasRoundStarted ? "继续" : "开始"}
             </TooltipContent>
           </Tooltip>}
 
