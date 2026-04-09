@@ -260,9 +260,7 @@ export default function Home() {
   useEffect(() => {
     const imageUrl = state.customBackground || RANDOM_BG;
     const img = new Image();
-    img.src = imageUrl;
-    img.onerror = () => setClockTextClassName("text-gray-700");
-    img.onload = () => {
+    const applyClockTextColor = () => {
       const canvas = document.createElement("canvas");
       canvas.width = 48;
       canvas.height = 48;
@@ -279,6 +277,15 @@ export default function Home() {
       const avgLuminance = total / (data.length / 4);
       setClockTextClassName(avgLuminance < 140 ? "text-gray-100 drop-shadow-sm" : "text-gray-700");
     };
+    img.onerror = () => setClockTextClassName("text-gray-700");
+    img.onload = applyClockTextColor;
+    img.src = imageUrl;
+
+    // 某些浏览器下缓存图片会在绑定 onload 前就完成，导致 onload 不触发
+    // 这里补一次 complete 检查，确保刷新后也能正确计算文字颜色
+    if (img.complete && img.naturalWidth > 0) {
+      applyClockTextColor();
+    }
   }, [state.customBackground]);
 
   useEffect(() => {

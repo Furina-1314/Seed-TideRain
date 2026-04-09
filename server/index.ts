@@ -56,6 +56,16 @@ function getGeminiApiKey(): string {
   return "";
 }
 
+function upsertGeminiApiKeyInEnvFile(envPath: string, apiKey: string) {
+  const normalizedKey = apiKey.trim();
+  const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : "";
+  const lines = existing.length > 0 ? existing.split("\n") : [];
+  const filtered = lines.filter((line) => !line.trim().match(/^GEMINI_API_KEY\s*=/));
+  filtered.push(`GEMINI_API_KEY=${normalizedKey}`);
+  const nextContent = `${filtered.join("\n").replace(/\n+$/g, "")}\n`;
+  fs.writeFileSync(envPath, nextContent, "utf-8");
+}
+
 function normalizeDueDate(input: unknown): string | undefined {
   if (typeof input !== "string" || !input.trim()) return undefined;
   const parsed = new Date(input);
@@ -77,26 +87,31 @@ function extractJsonObject(raw: string): string {
 
 async function fetchGeminiTodos(params: { model: string; rawText: string; apiKey: string }) {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(params.model)}:generateContent?key=${encodeURIComponent(params.apiKey)}`;
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      generationConfig: {
-        temperature: 0.1,
-        responseMimeType: "application/json",
-      },
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              text: `${TODO_EXTRACTION_PROMPT}\n\n群聊文本如下：\n${params.rawText}`,
-            },
-          ],
+  let response: Response;
+  try {
+    response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        generationConfig: {
+          temperature: 0.1,
+          responseMimeType: "application/json",
         },
-      ],
-    }),
-  });
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: `${TODO_EXTRACTION_PROMPT}\n\n群聊文本如下：\n${params.rawText}`,
+              },
+            ],
+          },
+        ],
+      }),
+    });
+  } catch {
+    throw new Error("无法连接 Gemini API（网络或代理异常）。请检查网络、代理设置，或确认当前网络可访问 Google AI 服务。");
+  }
 
   if (!response.ok) {
     const errText = await response.text();
@@ -136,6 +151,22 @@ async function startServer() {
 
   app.get("/api/ai/config", (_req, res) => {
     res.json({ hasKey: Boolean(getGeminiApiKey()) });
+  });
+
+  app.post("/api/ai/config", (req, res) => {
+    try {
+      const apiKey = typeof req.body?.apiKey === "string" ? req.body.apiKey.trim() : "";
+      if (!apiKey) {
+        res.status(400).json({ error: "API Key 不能为空。" });
+        return;
+      }
+      const envPath = path.resolve(process.cwd(), ".env");
+      upsertGeminiApiKeyInEnvFile(envPath, apiKey);
+      process.env.GEMINI_API_KEY = apiKey;
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : "保存配置失败" });
+    }
   });
 
   app.post("/api/ai/todos", async (req, res) => {
