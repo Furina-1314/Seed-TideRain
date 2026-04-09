@@ -12,6 +12,8 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
   const { state, dispatch } = useGame();
   const bgInputRef = useRef<HTMLInputElement>(null);
   const [geminiApiStatus, setGeminiApiStatus] = useState<"configured" | "missing" | "unavailable">("unavailable");
+  const [geminiApiKeyInput, setGeminiApiKeyInput] = useState("");
+  const [isSavingGeminiKey, setIsSavingGeminiKey] = useState(false);
 
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
@@ -246,6 +248,37 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
     };
     void loadAiConfig();
   }, []);
+
+  const handleSaveGeminiApiKey = async () => {
+    const apiKey = geminiApiKeyInput.trim();
+    if (!apiKey) {
+      alert("请输入 Gemini API Key。");
+      return;
+    }
+    try {
+      setIsSavingGeminiKey(true);
+      if (window.desktop?.isElectron && window.desktop.ai?.setConfig) {
+        await window.desktop.ai.setConfig({ apiKey });
+      } else {
+        const response = await fetch("/api/ai/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ apiKey }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data?.error || "保存失败");
+        }
+      }
+      setGeminiApiStatus("configured");
+      setGeminiApiKeyInput("");
+      alert("Gemini API Key 已保存并覆盖旧值。");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "保存失败");
+    } finally {
+      setIsSavingGeminiKey(false);
+    }
+  };
 
   const getHeatmapColor = (minutes: number) => {
     if (minutes === 0) return "bg-gray-100";
@@ -518,10 +551,28 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
             </h3>
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-gray-600 mb-1 block">Gemini API Key（仅环境变量）</label>
+                <label className="text-xs text-gray-600 mb-1 block">Gemini API Key</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="password"
+                    value={geminiApiKeyInput}
+                    onChange={(e) => setGeminiApiKeyInput(e.target.value)}
+                    autoComplete="new-password"
+                    placeholder="输入后将覆盖写入 GEMINI_API_KEY"
+                    className="flex-1 bg-gray-50 rounded-lg px-3 py-2 text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                  />
+                  <button
+                    type="button"
+                    disabled={isSavingGeminiKey}
+                    onClick={handleSaveGeminiApiKey}
+                    className="px-3 py-2 rounded-lg bg-emerald-500 text-white text-xs hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {isSavingGeminiKey ? "保存中..." : "保存"}
+                  </button>
+                </div>
                 <p className="text-xs text-gray-500 mt-1">
                   {geminiApiStatus === "configured" && <>当前状态：已配置。</>}
-                  {geminiApiStatus === "missing" && <>当前状态：未配置。请在服务端的 <code>.env</code>（或运行环境变量）中设置 <code>GEMINI_API_KEY</code>。</>}
+                  {geminiApiStatus === "missing" && <>当前状态：未配置。</>}
                   {geminiApiStatus === "unavailable" && <>当前状态：无法检测。当前运行环境没有连到服务端或 Electron AI 接口；如果你现在是用 <code>npm run dev</code> 启动的纯前端开发模式，这是正常现象。</>}
                 </p>
               </div>
