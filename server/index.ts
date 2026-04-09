@@ -87,26 +87,31 @@ function extractJsonObject(raw: string): string {
 
 async function fetchGeminiTodos(params: { model: string; rawText: string; apiKey: string }) {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(params.model)}:generateContent?key=${encodeURIComponent(params.apiKey)}`;
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      generationConfig: {
-        temperature: 0.1,
-        responseMimeType: "application/json",
-      },
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              text: `${TODO_EXTRACTION_PROMPT}\n\n群聊文本如下：\n${params.rawText}`,
-            },
-          ],
+  let response: Response;
+  try {
+    response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        generationConfig: {
+          temperature: 0.1,
+          responseMimeType: "application/json",
         },
-      ],
-    }),
-  });
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: `${TODO_EXTRACTION_PROMPT}\n\n群聊文本如下：\n${params.rawText}`,
+              },
+            ],
+          },
+        ],
+      }),
+    });
+  } catch {
+    throw new Error("无法连接 Gemini API（网络或代理异常）。请检查网络、代理设置，或确认当前网络可访问 Google AI 服务。");
+  }
 
   if (!response.ok) {
     const errText = await response.text();

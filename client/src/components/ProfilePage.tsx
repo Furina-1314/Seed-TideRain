@@ -274,7 +274,11 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
       setGeminiApiKeyInput("");
       alert("Gemini API Key 已保存并覆盖旧值。");
     } catch (error) {
-      alert(error instanceof Error ? error.message : "保存失败");
+      if (error instanceof TypeError) {
+        alert("无法连接后端接口（/api/ai/config）。请确认已运行 npm run start（Web）或 npm run dev:desktop（Electron）。");
+      } else {
+        alert(error instanceof Error ? error.message : "保存失败");
+      }
     } finally {
       setIsSavingGeminiKey(false);
     }
