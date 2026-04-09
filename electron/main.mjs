@@ -66,6 +66,16 @@ function getGeminiApiKey() {
   return "";
 }
 
+function upsertGeminiApiKeyInEnvFile(envPath, apiKey) {
+  const normalizedKey = String(apiKey || "").trim();
+  const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : "";
+  const lines = existing.length > 0 ? existing.split("\n") : [];
+  const filtered = lines.filter((line) => !line.trim().match(/^GEMINI_API_KEY\s*=/));
+  filtered.push(`GEMINI_API_KEY=${normalizedKey}`);
+  const nextContent = `${filtered.join("\n").replace(/\n+$/g, "")}\n`;
+  fs.writeFileSync(envPath, nextContent, "utf-8");
+}
+
 function normalizeDueDate(input) {
   if (typeof input !== "string" || !input.trim()) return undefined;
   const parsed = new Date(input);
@@ -160,6 +170,16 @@ function createWindow() {
 }
 
 ipcMain.handle("ai:config:get", async () => ({ hasKey: Boolean(getGeminiApiKey()) }));
+ipcMain.handle("ai:config:set", async (_event, payload) => {
+  const apiKey = typeof payload?.apiKey === "string" ? payload.apiKey.trim() : "";
+  if (!apiKey) throw new Error("API Key 不能为空。");
+  const envPath = app.isReady()
+    ? path.resolve(app.getPath("userData"), ".env")
+    : path.resolve(process.cwd(), ".env");
+  upsertGeminiApiKeyInEnvFile(envPath, apiKey);
+  process.env.GEMINI_API_KEY = apiKey;
+  return { ok: true };
+});
 ipcMain.handle("ai:todos:generate", async (_event, payload) => {
   const model = typeof payload?.model === "string" ? payload.model.trim() : "";
   const rawText = typeof payload?.rawText === "string" ? payload.rawText.trim() : "";
