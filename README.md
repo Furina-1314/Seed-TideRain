@@ -67,7 +67,8 @@ NODE_USE_ENV_PROXY=1
 
 ## 文档
 
-[开发文档](docs/Development.md)
+- [开发文档](docs/Development.md)
+- [介绍文档](docs/Introduction.md)
 
 ## 许可证
 

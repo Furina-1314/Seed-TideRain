@@ -1,4 +1,4 @@
-# 汐得时雨（Seed: TideRain）项目介绍文档
+# 汐得时雨（Seed: TideRain）介绍文档
 
 ## 1. 项目概述
 
