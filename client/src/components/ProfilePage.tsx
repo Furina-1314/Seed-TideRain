@@ -1,4 +1,4 @@
-import { useGame } from "@/contexts/GameContext";
+import { useGame, type GameState } from "@/contexts/GameContext";
 import { useRef, useMemo, useEffect, useState } from "react";
 import { X, Download, Upload, Trophy, Calendar, Clock, Target, Flame, Award, TrendingUp, ImagePlus, RotateCcw, Lock, Unlock, BarChart3, Zap, CheckSquare, Trash2, Sparkles } from "lucide-react";
 import { GEMINI_MODELS } from "@/lib/todoAi";
@@ -20,20 +20,45 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
 
   const isCompletedToday = (habit: typeof state.habits[0]) => habit.completedDates.includes(todayStr);
 
+  const normalizeImportState = (rawState: any): Partial<GameState> => {
+    if (!rawState || typeof rawState !== "object") return {};
+
+    const payload: Partial<GameState> = { ...rawState };
+
+    if (rawState.pomodoro && typeof rawState.pomodoro === "object") {
+      payload.pomodoroMinutes = Number(rawState.pomodoro.minutes ?? payload.pomodoroMinutes ?? 25);
+      payload.breakMinutes = Number(rawState.pomodoro.breakMinutes ?? payload.breakMinutes ?? 5);
+      payload.pomodoroCycles = Number(rawState.pomodoro.cycles ?? payload.pomodoroCycles ?? 4);
+      payload.currentCycle = Number(rawState.pomodoro.currentCycle ?? payload.currentCycle ?? 1);
+      payload.timerMode = rawState.pomodoro.timerMode === "break" ? "break" : "focus";
+      payload.timeRemaining = Number(rawState.pomodoro.timeRemaining ?? payload.timeRemaining ?? payload.pomodoroMinutes! * 60);
+    }
+
+    payload.sessions = Array.isArray(rawState.sessions) ? rawState.sessions : payload.sessions ?? [];
+    payload.habits = Array.isArray(rawState.habits) ? rawState.habits : payload.habits ?? [];
+    payload.memos = Array.isArray(rawState.memos) ? rawState.memos : payload.memos ?? [];
+    payload.notes = Array.isArray(rawState.notes) ? rawState.notes : payload.notes ?? [];
+    payload.stickyNotes = Array.isArray(rawState.stickyNotes) ? rawState.stickyNotes : payload.stickyNotes ?? [];
+    payload.heatmapData = Array.isArray(rawState.heatmapData) ? rawState.heatmapData : payload.heatmapData ?? [];
+    payload.memoTags = Array.isArray(rawState.memoTags) ? rawState.memoTags : payload.memoTags ?? [];
+    payload.musicTracks = Array.isArray(rawState.musicTracks) ? rawState.musicTracks : payload.musicTracks ?? [];
+    payload.diaryEntries = rawState.diaryEntries && typeof rawState.diaryEntries === "object"
+      ? rawState.diaryEntries
+      : payload.diaryEntries ?? {};
+    payload.musicProgress = rawState.musicProgress && typeof rawState.musicProgress === "object"
+      ? rawState.musicProgress
+      : payload.musicProgress ?? {};
+
+    return payload;
+  };
+
   const exportData = () => {
     const data = {
+      version: 2,
       exportDate: new Date().toISOString(),
-      stats: {
-        totalFocusMinutes: state.totalFocusMinutes,
-        sessionsCompleted: state.sessionsCompleted,
-        currentStreak: state.currentStreak,
-        longestStreak: state.longestStreak,
-        affection: state.affection,
-      },
-      sessions: state.sessions,
-      habits: state.habits,
-      memos: state.memos,
-      heatmapData: state.heatmapData,
+      app: "focus-companion",
+      schema: "focus-companion/state-v2",
+      state,
     };
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -96,27 +121,16 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
         try {
           const parsed = JSON.parse(event.target?.result as string);
 
-          if (parsed?.stats && parsed?.sessions) {
-            dispatch({
-              type: "LOAD_STATE",
-              payload: {
-                affection: Number(parsed.stats.affection || 0),
-                totalFocusMinutes: Number(parsed.stats.totalFocusMinutes || 0),
-                sessionsCompleted: Number(parsed.stats.sessionsCompleted || 0),
-                currentStreak: Number(parsed.stats.currentStreak || 0),
-                longestStreak: Number(parsed.stats.longestStreak || 0),
-                sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
-                habits: Array.isArray(parsed.habits) ? parsed.habits : [],
-                memos: Array.isArray(parsed.memos) ? parsed.memos : [],
-                heatmapData: Array.isArray(parsed.heatmapData) ? parsed.heatmapData : [],
-              },
-            });
-            alert("数据导入成功");
+          const sourceState = parsed?.state && typeof parsed.state === "object" ? parsed.state : null;
+          const payload = normalizeImportState(sourceState);
+
+          if (Object.keys(payload).length === 0) {
+            alert("文件格式错误");
             return;
           }
 
-          if (parsed && typeof parsed === "object") {
-            dispatch({ type: "LOAD_STATE", payload: parsed });
+          if (sourceState && typeof sourceState === "object") {
+            dispatch({ type: "LOAD_STATE", payload });
             alert("数据导入成功");
             return;
           }
