@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain } from "electron";
+import { app, BrowserWindow, shell, ipcMain, net, session } from "electron";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,23 +28,20 @@ const TODO_EXTRACTION_PROMPT = `你是“待办提取助手”。
 3) 若没有明确截止时间，dueDate 设为 null。
 4) 只保留真正需要执行的事项，不要输出解释。`;
 
-function readGeminiApiKeyFromEnvFile(envPath) {
+function readEnvValueFromEnvFile(envPath, key) {
   if (!fs.existsSync(envPath)) return "";
   const content = fs.readFileSync(envPath, "utf-8");
   for (const line of content.split("\n")) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) continue;
-    const match = trimmed.match(/^GEMINI_API_KEY\s*=\s*(.*)$/);
+    const match = trimmed.match(new RegExp(`^${key}\\s*=\\s*(.*)$`));
     if (!match) continue;
     return match[1].trim().replace(/^['"]|['"]$/g, "");
   }
   return "";
 }
 
-function getGeminiApiKey() {
-  const directEnv = (process.env.GEMINI_API_KEY || "").trim();
-  if (directEnv) return directEnv;
-
+function getEnvCandidates() {
   const envCandidates = [
     path.resolve(process.cwd(), ".env"),
     path.resolve(__dirname, "..", ".env"),
@@ -58,12 +55,35 @@ function getGeminiApiKey() {
     envCandidates.unshift(path.resolve(app.getPath("userData"), ".env"));
   }
 
-  for (const envPath of envCandidates) {
-    const value = readGeminiApiKeyFromEnvFile(envPath).trim();
+  return envCandidates;
+}
+
+function getEnvValue(key) {
+  const directEnv = (process.env[key] || "").trim();
+  if (directEnv) return directEnv;
+
+  for (const envPath of getEnvCandidates()) {
+    const value = readEnvValueFromEnvFile(envPath, key).trim();
     if (value) return value;
   }
 
   return "";
+}
+
+function getGeminiApiKey() {
+  return getEnvValue("GEMINI_API_KEY");
+}
+
+function getProxyConfig() {
+  const httpsProxy = getEnvValue("HTTPS_PROXY");
+  const httpProxy = getEnvValue("HTTP_PROXY") || httpsProxy;
+  const nodeUseEnvProxy = getEnvValue("NODE_USE_ENV_PROXY");
+
+  return {
+    httpProxy,
+    httpsProxy: httpsProxy || httpProxy,
+    nodeUseEnvProxy,
+  };
 }
 
 function upsertGeminiApiKeyInEnvFile(envPath, apiKey) {
@@ -95,11 +115,33 @@ function extractJsonObject(raw) {
   return trimmed;
 }
 
+async function configureNetworkProxy() {
+  const { httpProxy, httpsProxy, nodeUseEnvProxy } = getProxyConfig();
+
+  if (httpProxy) process.env.HTTP_PROXY = httpProxy;
+  if (httpsProxy) process.env.HTTPS_PROXY = httpsProxy;
+  if (nodeUseEnvProxy) process.env.NODE_USE_ENV_PROXY = nodeUseEnvProxy;
+
+  const proxyRules = [
+    httpProxy ? `http=${httpProxy}` : "",
+    httpsProxy ? `https=${httpsProxy}` : "",
+  ]
+    .filter(Boolean)
+    .join(";");
+
+  if (!proxyRules) return;
+
+  await session.defaultSession.setProxy({
+    mode: "fixed_servers",
+    proxyRules,
+  });
+}
+
 async function fetchGeminiTodos({ model, rawText, apiKey }) {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
   let response;
   try {
-    response = await fetch(endpoint, {
+    response = await net.fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -110,8 +152,9 @@ async function fetchGeminiTodos({ model, rawText, apiKey }) {
         contents: [{ role: "user", parts: [{ text: `${TODO_EXTRACTION_PROMPT}\n\n群聊文本如下：\n${rawText}` }] }],
       }),
     });
-  } catch {
-    throw new Error("无法连接 Gemini API（网络或代理异常）。请检查网络、代理设置，或确认当前网络可访问 Google AI 服务。");
+  } catch (error) {
+    const details = error instanceof Error ? ` (${error.message})` : "";
+    throw new Error(`无法连接 Gemini API（网络或代理异常）。请检查网络、代理设置，或确认当前网络可访问 Google AI 服务。${details}`);
   }
 
   if (!response.ok) {
@@ -196,7 +239,8 @@ ipcMain.handle("ai:todos:generate", async (_event, payload) => {
   return fetchGeminiTodos({ model, rawText, apiKey: geminiApiKey });
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await configureNetworkProxy();
   createWindow();
 
   app.on("activate", () => {
