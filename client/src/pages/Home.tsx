@@ -51,6 +51,7 @@ type GuideStep = {
 };
 
 const quoteModules = import.meta.glob("/src/components/DailyQuotes/*.json");
+const CLOCK_TEXT_CLASS_STORAGE_KEY = "focus-companion-clock-text-class";
 
 // 自定义背景组件
 function CustomBackground() {
@@ -260,14 +261,32 @@ export default function Home() {
   useEffect(() => {
     const imageUrl = state.customBackground || RANDOM_BG;
     const img = new Image();
-    img.src = imageUrl;
-    img.onerror = () => setClockTextClassName("text-gray-700");
-    img.onload = () => {
+    const fallbackClass = state.customBackground ? "text-gray-100 drop-shadow-sm" : "text-gray-700";
+    const applyClockClass = (nextClass: string) => {
+      setClockTextClassName(nextClass);
+      if (state.customBackground) {
+        localStorage.setItem(CLOCK_TEXT_CLASS_STORAGE_KEY, nextClass);
+      } else {
+        localStorage.removeItem(CLOCK_TEXT_CLASS_STORAGE_KEY);
+      }
+    };
+
+    if (state.customBackground) {
+      const storedClockClass = localStorage.getItem(CLOCK_TEXT_CLASS_STORAGE_KEY);
+      if (storedClockClass) {
+        setClockTextClassName(storedClockClass);
+      }
+    }
+
+    const applyClockTextColor = () => {
       const canvas = document.createElement("canvas");
       canvas.width = 48;
       canvas.height = 48;
       const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+      if (!ctx) {
+        applyClockClass(fallbackClass);
+        return;
+      }
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
       let total = 0;
@@ -277,8 +296,17 @@ export default function Home() {
         total += luminance * alpha;
       }
       const avgLuminance = total / (data.length / 4);
-      setClockTextClassName(avgLuminance < 140 ? "text-gray-100 drop-shadow-sm" : "text-gray-700");
+      applyClockClass(avgLuminance < 140 ? "text-gray-100 drop-shadow-sm" : "text-gray-700");
     };
+    img.onerror = () => applyClockClass(fallbackClass);
+    img.onload = applyClockTextColor;
+    img.src = imageUrl;
+
+    // 某些浏览器下缓存图片会在绑定 onload 前就完成，导致 onload 不触发
+    // 这里补一次 complete 检查，确保刷新后也能正确计算文字颜色
+    if (img.complete && img.naturalWidth > 0) {
+      applyClockTextColor();
+    }
   }, [state.customBackground]);
 
   useEffect(() => {
