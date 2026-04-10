@@ -52,6 +52,15 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
     return payload;
   };
 
+  const restoreWindowFocus = () => {
+    // Electron 中在原生 confirm/alert/文件选择器关闭后，窗口偶发不会自动恢复焦点
+    // 会导致输入框看起来“无法输入”，直到用户切换一次窗口。
+    // 延迟到当前事件循环末尾再聚焦，确保在弹窗真正关闭后执行。
+    window.setTimeout(() => {
+      window.focus();
+    }, 0);
+  };
+
   const exportData = () => {
     const data = {
       version: 2,
@@ -75,14 +84,17 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
   const clearAllData = () => {
     if (!confirm("⚠️ 警告：此操作将清空所有数据！\n\n点击确定继续")) {
       alert("操作已取消");
+      restoreWindowFocus();
       return;
     }
     if (!confirm("二次确认：你真的确定要清空所有数据吗？")) {
       alert("操作已取消");
+      restoreWindowFocus();
       return;
     }
     if (!confirm("最终确认：你真的确定要清空所有数据吗？")) {
       alert("操作已取消");
+      restoreWindowFocus();
       return;
     }
     dispatch({
@@ -106,6 +118,7 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
       },
     });
     alert("数据已清空");
+    restoreWindowFocus();
   };
 
   const importData = () => {
@@ -114,7 +127,10 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
     input.accept = ".json";
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
+      if (!file) {
+        restoreWindowFocus();
+        return;
+      }
 
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -126,18 +142,22 @@ export default function ProfilePage({ onClose, onStartGuide }: ProfilePageProps)
 
           if (Object.keys(payload).length === 0) {
             alert("文件格式错误");
+            restoreWindowFocus();
             return;
           }
 
           if (sourceState && typeof sourceState === "object") {
             dispatch({ type: "LOAD_STATE", payload });
             alert("数据导入成功");
+            restoreWindowFocus();
             return;
           }
 
           alert("文件格式错误");
+          restoreWindowFocus();
         } catch {
           alert("文件格式错误");
+          restoreWindowFocus();
         }
       };
       reader.readAsText(file);
